@@ -11,7 +11,9 @@ transport tests), revised again on 2026-10-22 for the release documentation pass
 version-support wording and powered-by-dsh badge revision, and revised again on 2026-10-22
 for the open-source release path-sanitation pass: each time the tarball was repacked with
 documentation-only changes and the isolated install/composition verification was re-run
-(52 PASS / 0 FAIL). Dynamic evidence from the Lead's final run and the owning
+(52 PASS / 0 FAIL). The release was also published to the npm registry on 2026-10-22:
+section H records the pre-publication self-check and the registry verification, and the
+open acceptance items below remain open. Dynamic evidence from the Lead's final run and the owning
 teammates is quoted below; everything that was not run remains `NOT COMPLETED` and is
 listed in [Not completed / limitations](#not-completed--limitations).
 
@@ -24,6 +26,7 @@ listed in [Not completed / limitations](#not-completed--limitations).
 | Source parity with the fixed upstream commit | **PASS** — only the provenance header, `@module` line and `sessionId` line differ (17 insertions, 1 deletion) |
 | Build / pack | **PASS** — `tsdown` exit 0 (`lib/index.js` 23,608 B, `lib/index.d.ts` 437 B); `prepack: "tsdown"` is set, and with `lib/` removed `npm pack --foreground-scripts` rebuilt `lib/` and produced a tarball containing both (`PACK_EXIT=0`); `pnpm pack --pack-destination` likewise rebuilt `lib/` and produced a valid tarball (`PNPM_PACK_EXIT=0`). Release tarball after the 2026-10-22 open-source path-sanitation documentation revision: 8 files, 27,545 B, SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`, built after the final documentation edit; it supersedes the version-support documentation artifact `EAF7305E…227A3` (27,543 B), the release-documentation artifact `21CEBBA4…04F6A` (26,163 B), the intermediate docs-rebuild `4F23E747…D9B4` (25,747 B) and `C2A83BE2…D091F` (24,942 B) with `package.json` and `lib/` bytes unchanged |
 | Install / effective composition | **PASS** — target CLI `0.2.1-rc.2`; isolated profile; official `auto-review` row `disabled: true`; exactly one active `auto-review-opencode` row; re-verified against the release artifact on 2026-10-22 (52 PASS / 0 FAIL, `.verify/run-install-verification.ps1`); installed artifact imports in the real 0.2.1-rc.2 runtime |
+| npm publication | **PASS** — `dsh-opencode-auto-review@0.1.0` published to `registry.npmjs.org` on 2026-10-22 21:33 Asia/Shanghai; registry `dist.integrity`/`dist.shasum` and the downloaded registry tarball match the verified 27,545 B artifact (H1–H6) |
 | Launch with the published artifact (DEV §7 phase 5 "starts with the published artifact") | **NOT COMPLETED** — no full headless/web profile boot was run; only `--dump-config` / `--dump-config-schema` import checks exist |
 | Real OpenCode gateway allow/deny acceptance | **NOT COMPLETED** — not run: no gateway credentials in this environment, and the running host is DSH 0.2.0-rc.2, not the target release. The loopback transport evidence (D1–D6) is the substitute evidence for the reviewer header path; this is one of the two open acceptance items. |
 | `opencode-go` route | Excluded from the first-release support claim (the three APIs pass locally, but there is no real-gateway acceptance; DEVELOPMENT.md §6.3). |
@@ -398,6 +401,27 @@ disabled; offline only.
 | 7. Delivery — documentation | README (EN/ZH), upstream record and verification record; unfinished items explicitly listed and no pass claimed without evidence | A9, A1; this record's NOT COMPLETED entries | PASS |
 | 7. Delivery — artifact | Prebuilt tarball plus source and verification record delivered | A8 final tarball; `README.md`/`README.zh.md`/`UPSTREAM.md`/`VERIFICATION.md` present | PASS |
 
+## H. Registry publication — PASS
+
+Self-check and first public release on the npm registry, 2026-10-22 (Asia/Shanghai). The
+checkout had been moved from its pre-rename directory, so every pnpm junction was stale;
+the working tree was re-linked first (`pnpm install --frozen-lockfile --ignore-scripts`,
+lifecycle scripts skipped because no native build is needed for this package) and then
+re-checked end to end before publishing.
+
+| Check | Evidence | Status |
+| --- | --- | --- |
+| H1. Build, typecheck and pack reproduce the recorded output | `tsdown` (with the sandbox resolution bridges) rebuilt `lib/index.js` (23,608 B, `18A92872…E50`) and `lib/index.d.ts` (437 B, `780FF1B6…A811`); `tsc --noEmit` exit 0; `npm pack` with the `prepack` hook reproduced the recorded artifact: 27,545 B, SHA-256 `63A76209…3A29C` | PASS |
+| H2. Full test suite passes on the re-linked checkout | `vitest run --pool=threads` via the sandbox runner: 4 files, **65/65 tests passed** (31 + 7 + 14 + 13), 2026-10-22 17:29 Asia/Shanghai | PASS |
+| H3. Package name and version are valid and were free for first publication | `npm view dsh-opencode-auto-review` returned `E404` before publishing; `npm publish` succeeded as `+ dsh-opencode-auto-review@0.1.0` with tag `latest` and default public access | PASS |
+| H4. Registry metadata matches the verified artifact | `dist.integrity` = `sha512-iYJt8jc/SJn2wTDe1hUB6QrBRBIV1njqZTS2dmfpPcugNEhKj9/z8/Ady/dlLTXcMzvmXfaCSJjqyZPbz+UklQ==` and `dist.shasum` = `2dbdc6a9b44011bc131fbe26e93758faaef2ec68`, i.e. the SHA-512/SHA-1 of the 27,545 B artifact above | PASS |
+| H5. The registry tarball is byte-identical to the verified artifact | Downloaded `https://registry.npmjs.org/dsh-opencode-auto-review/-/dsh-opencode-auto-review-0.1.0.tgz` on 2026-10-22 21:37 Asia/Shanghai: 27,545 B, SHA-256 `63A76209…3A29C`; every payload file hash matches the repository copy (README.md `B87870E6…`, README.zh.md `B0C55621…`, UPSTREAM.md `07E5445C…`, package.json `E297644B…`, `lib/index.js` `18A92872…`, `lib/index.d.ts` `780FF1B6…`, LICENSE `AD56EF83…`, cordis.patch.yml `1617EE01…`) | PASS |
+| H6. Publisher identity and account security | Published as npm account `drscorpio`; package maintainer is `drscorpio <drscorpio@vip.qq.com>`; the account has 2FA enabled (`auth-and-writes`) and publishing used a bypass-2FA granular access token | PASS |
+
+Known follow-up (not a release blocker): `package.json` has no `repository`, `homepage` or
+`bugs` fields, so the npm page for `0.1.0` does not link back to this repository. Add them in
+the next published version.
+
 ## Evidence provenance
 
 | Evidence | Source |
@@ -411,6 +435,7 @@ disabled; offline only.
 | Release artifact `21CEBBA4…04F6A` (26,163 B) rebuilt after the final documentation edit; isolated installation and effective composition re-verified (52 PASS / 0 FAIL); packed manifest and `lib/` hashes unchanged | Release-documentation verification, 2026-10-22 15:44–15:46 Asia/Shanghai; F8 and `.verify/logs/tarball-sha256.log`, `step2-plugin-add-tgz.log`, `dump-config.log`, `dump-config-schema.log` |
 | Version-support documentation artifact `EAF7305E…227A3` (27,543 B) rebuilt after the DSH version-support wording and powered-by-dsh badge revision; isolated installation and effective composition re-verified (52 PASS / 0 FAIL); packed READMEs byte-identical to the worktree; manifest and `lib/` hashes unchanged | Version-support documentation verification, 2026-10-22 16:54–16:55 Asia/Shanghai; F8 and `.verify/logs/tarball-sha256.log`, `step2-plugin-add-tgz.log`, `dump-config.log`, `dump-config-schema.log` |
 | Open-source path-sanitation artifact `63A76209…3A29C` (27,545 B) rebuilt after removing developer-local absolute paths from the tracked documentation and adding a packed-payload path scan; isolated installation and effective composition re-verified (52 PASS / 0 FAIL); packed READMEs/`UPSTREAM.md` byte-identical to the worktree; manifest and `lib/` hashes unchanged | Open-source release verification, 2026-10-22 17:10–17:11 Asia/Shanghai; F8 and `.verify/logs/tarball-sha256.log`, `step2-plugin-add-tgz.log`, `dump-config.log`, `dump-config-schema.log` |
+| npm publication of `dsh-opencode-auto-review@0.1.0`: registry `dist.integrity`/`dist.shasum` and byte-identical downloaded registry tarball | npm publish / `npm view` / `npm pack` against `registry.npmjs.org`, 2026-10-22 21:33–21:37 Asia/Shanghai; H1–H6; downloaded tarball kept in `.verify/npm-published/` (gitignored, not shipped) |
 | File-level diffs, hashes, manifest and patch contracts | Section A of this record; commands reproduce in this checkout |
 
 ## Not completed / limitations
