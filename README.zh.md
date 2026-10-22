@@ -3,6 +3,7 @@
 [English](README.md) | 中文
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-opencode-auto-review.svg)](https://www.npmjs.com/package/dsh-opencode-auto-review)
 [![DSH 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![Node.js >=22.19.0](https://img.shields.io/badge/Node.js-%3E%3D22.19.0-brightgreen.svg)](https://nodejs.org)
 
@@ -30,16 +31,18 @@
 
 ## 快速开始
 
-`0.1.0` 发布物是预构建 tarball。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内
-（见[验证状态](#验证状态)）。
+`0.1.0` 发布物已发布到 npm：[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review)。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
 
 前置条件：官方 `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` 组合层必须已在该 profile 中启用，
 并且在有序 bundle 列表中位于本包之前（[安装](#安装)步骤 1）。缺少该层时，本包 patch 的停用条目只会告警，
 下面的组合检查也无法通过。
 
 ```sh
-# 1. 将发布产物安装到目标 profile
-dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
+# 1. 从 npm registry 安装到目标 profile
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+
+#    离线备选：从同一个预构建产物（tarball）安装
+#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
 
 # 2. 检查生效组合
 dsh --profile <profile> --dump-config
@@ -156,14 +159,17 @@ pi-ai `1.1.0` 的 OpenCode 提供方只在 `sessionId` 非空且不存在同名�
 dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2
 ```
 
-步骤 2 —— 从预构建 tarball 安装本包（无需构建，也不依赖开发者源码路径）：
+步骤 2 —— 安装本包。标准路径是 npm registry 包；预构建 tarball 是同一产物，供离线或内网 profile 使用（两者都无需构建，也不依赖开发者源码路径）：
 
 ```sh
+# 从 npm registry 安装（推荐；当前发布版本为 0.1.0）
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+
+# 或从发布 tarball 安装（registry 不可达时使用）
 dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
 ```
 
-tarball 是本检出在 `0.1.0` 上构建的发布产物。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有
-`prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
+registry 包与 tarball 是同一个已发布产物（27,545 B，SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`）。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.0` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
 
 步骤 3 —— 检查生效组合，而不只是 bundle 列表：
 

@@ -3,6 +3,7 @@
 English | [中文](README.zh.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-opencode-auto-review.svg)](https://www.npmjs.com/package/dsh-opencode-auto-review)
 [![DSH 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![Node.js >=22.19.0](https://img.shields.io/badge/Node.js-%3E%3D22.19.0-brightgreen.svg)](https://nodejs.org)
 
@@ -44,9 +45,11 @@ PTC handling, cancellation and disposal — is the official implementation, unch
 
 ## Quick start
 
-The `0.1.0` release ships as a prebuilt tarball. Installation and effective composition are
-the verified path; the load/reselect step and a full booted-profile launch are not covered
-by that evidence (see [Verification status](#verification-status)).
+The `0.1.0` release is published on npm as
+[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review).
+Installation and effective composition are the verified path; the load/reselect step and a
+full booted-profile launch are not covered by that evidence (see
+[Verification status](#verification-status)).
 
 Prerequisite: the official `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` bundle
 layer must already be enabled in the profile and ordered before this package
@@ -54,8 +57,11 @@ layer must already be enabled in the profile and ordered before this package
 the composition check below cannot pass.
 
 ```sh
-# 1. Install the release artifact into the target profile
-dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
+# 1. Install the npm package into the target profile
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+
+#    Offline alternative: install the same prebuilt artifact from its tarball
+#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
 
 # 2. Check the effective composition
 dsh --profile <profile> --dump-config
@@ -254,16 +260,24 @@ because it was enabled from the Web sidebar's Plugins page):
 dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2
 ```
 
-Step 2 — add this package from the prebuilt tarball (no build step, no developer source
-path):
+Step 2 — add this package. The standard path is the npm registry package; the prebuilt
+tarball is the same artifact for offline or air-gapped profiles (no build step, no
+developer source path in either case):
 
 ```sh
+# From the npm registry (recommended; the package is published at 0.1.0)
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+
+# Or from the release tarball, when the registry is not reachable
 dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
 ```
 
-The tarball is the release artifact built from this checkout at `0.1.0`. Do not substitute
-a git checkout: `lib/` is gitignored and the package has no `prepare`/`install` build hook,
-so a source install has no built entry point.
+The registry package and the tarball are the same published artifact (27,545 B, SHA-256
+`63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`). If you only need the
+package as a dependency in another project, `npm install dsh-opencode-auto-review@0.1.0`
+installs that same prebuilt package. Do not substitute a git checkout: `lib/` is gitignored
+and the package has no `prepare`/`install` build hook, so a source install has no built
+entry point.
 
 Step 3 — inspect the effective composition, not just the bundle list:
 

@@ -260,9 +260,10 @@ pass removed a developer-local absolute path; the previous packed hash was
 `E297644B6D2CB7424D50DE8F3497FFAD4176F0BA32FC2A553F62F1B067A99C95`, `lib/index.js`
 remains `18A92872FFAE35CF7E86C0DB69D4D98B7D618195D08A11150E13F78F26D53E50`, `lib/index.d.ts`
 remains `780FF1B6BC629A0DC3231371AB5BA581B820842C329123A138CE7C568295A811`, and the packed
-file list is unchanged (8 files). Extracted `README.md`, `README.zh.md` and `UPSTREAM.md` are
-byte-identical to the repository worktree (`B87870E6…BABC` / `B0C55621…E9F5` /
-`07E5445C…6C1F`). The prepack rebuild mechanism below was proven earlier; this pass and the
+file list is unchanged (8 files). Extracted `README.md`, `README.zh.md` and `UPSTREAM.md` were
+byte-identical to the repository worktree at build time (`B87870E6…BABC` / `B0C55621…E9F5` /
+`07E5445C…6C1F`); the post-publication README revision described in H is not part of the
+`0.1.0` artifact. The prepack rebuild mechanism below was proven earlier; this pass and the
 version-support pass are documentation-only, so both were packed with
 `npm pack --ignore-scripts` and the tarball's `lib/` and `package.json` bytes were
 hash-checked against the previously verified build instead of being rebuilt.
@@ -421,6 +422,16 @@ re-checked end to end before publishing.
 Known follow-up (not a release blocker): `package.json` has no `repository`, `homepage` or
 `bugs` fields, so the npm page for `0.1.0` does not link back to this repository. Add them in
 the next published version.
+
+Post-publication documentation update (not part of the `0.1.0` artifact): after the release,
+`README.md` and `README.zh.md` were revised on 2026-10-22 to document installing from the npm
+registry (`dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0`) as the standard
+path, keep the prebuilt tarball as the offline alternative, mention
+`npm install dsh-opencode-auto-review@0.1.0` for dependency-style use, and add the npm version
+badge. The npm `0.1.0` package and the release tarball remain unchanged (SHA-256
+`63A76209…3A29C`); the next published version will carry the updated documentation. Because
+npm version contents are immutable, the README shown on the npm page for `0.1.0` remains the
+pre-publication snapshot.
 
 ## Evidence provenance
 
