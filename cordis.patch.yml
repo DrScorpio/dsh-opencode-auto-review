@@ -1,0 +1,18 @@
+# Bundle layer for dsh-opencode-auto-review.
+#
+# The official Auto review row stays installed (it remains a dependency of this
+# profile) but is disabled here, and this plugin's equivalent row is inserted in
+# its place. Existing profiles that already enabled the official bundle keep
+# working after this bundle joins their list.
+#
+# Two distinct row ids are required:
+# - setting `name` on the existing `auto-review` row cannot replace the official
+#   plugin (patch `name` validates the row's existing plugin name), and
+# - inserting another row with the same id does not override the existing one.
+- id: auto-review
+  name: '@deepseek-ai/dsh-experimental-auto-review'
+  disabled: true
+
+- insert:
+    - id: auto-review-opencode
+      name: dsh-opencode-auto-review

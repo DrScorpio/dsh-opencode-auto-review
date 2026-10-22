@@ -1,0 +1,14 @@
+node_modules/
+node_modules.*/
+lib/
+*.tgz
+*.tsbuildinfo
+
+# Local-only development material: extracted upstream reference sources,
+# downloaded tool tarballs, verification tooling, and package-manager caches.
+.upstream/
+.verify/
+.tools/
+.npm-cache/
+.pnpm-store/
+.pnpm-cache/

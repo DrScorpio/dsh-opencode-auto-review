@@ -1,0 +1,9 @@
+# pnpm reads dependency build approvals from this file. These packages are
+# development-only toolchain dependencies; the published bundle ships prebuilt
+# JavaScript and never runs these scripts.
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  '@google/genai': true
+  koffi: true
+  node-pty: true
+  protobufjs: true
