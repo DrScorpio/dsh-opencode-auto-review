@@ -22,6 +22,14 @@
     "LICENSE"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DrScorpio/dsh-opencode-auto-review.git"
+  },
+  "homepage": "https://github.com/DrScorpio/dsh-opencode-auto-review#readme",
+  "bugs": {
+    "url": "https://github.com/DrScorpio/dsh-opencode-auto-review/issues"
+  },
   "keywords": [
     "dsh",
     "deepseek-harness",

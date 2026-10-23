@@ -1,0 +1,183 @@
+# Publish dsh-opencode-auto-review to npm when a version tag (v*) is pushed.
+#
+# Authentication uses npm Trusted Publishing (OIDC): this repository stores no
+# NPM_TOKEN. npmjs.org must be configured with a trusted publisher that matches
+# this workflow exactly:
+#
+#   Provider:          GitHub Actions
+#   Owner:             DrScorpio
+#   Repository:        dsh-opencode-auto-review
+#   Workflow filename: publish.yml   (basename only, no .github/workflows/ path)
+#   Environment:       (empty)
+#   Permissions:       allow publish
+#
+# Equivalent CLI (npm >= 11.15.0, account 2FA enabled, run once):
+#   npm login
+#   npm trust github dsh-opencode-auto-review \
+#     --file publish.yml \
+#     --repo DrScorpio/dsh-opencode-auto-review \
+#     --allow-publish
+#
+# Release flow:
+#   pnpm version patch        # bump version, commit, create tag v<version>
+#   git push --follow-tags    # triggers this workflow
+#
+# See RELEASING.md for the full runbook.
+
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (e.g. v0.1.1). Must match package.json."
+        required: true
+        type: string
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build, test and publish
+    # Publish from the canonical repository only: forks cannot hold a trusted
+    # publisher relationship for this package.
+    if: github.repository == 'DrScorpio/dsh-opencode-auto-review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # OIDC token consumed by npm trusted publishing
+    steps:
+      - name: Resolve release tag
+        id: release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+            if [ -z "$TAG" ]; then
+              echo "::error::the 'tag' input is required for workflow_dispatch"
+              exit 1
+            fi
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          case "$TAG" in
+            v*) ;;
+            *)
+              echo "::error::release tag must start with 'v', got '$TAG'"
+              exit 1
+              ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG (version ${TAG#v})"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Node 24 ships npm >= 11.5.1, which is the minimum for trusted
+      # publishing. Fail early instead of surfacing a confusing 404 at publish.
+      - name: Verify npm version supports trusted publishing
+        run: |
+          set -euo pipefail
+          NPM_VERSION="$(npm --version)"
+          echo "npm $NPM_VERSION / node $(node --version)"
+          NPM_VERSION="$NPM_VERSION" node -e '
+            const [major, minor] = process.env.NPM_VERSION.split(".").map(Number)
+            if (major < 11 || (major === 11 && minor < 5)) {
+              console.error(`npm ${process.env.NPM_VERSION} is too old: trusted publishing needs >= 11.5.1`)
+              process.exit(1)
+            }
+          '
+
+      - name: Check tag matches package.json
+        env:
+          EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::tag is v$EXPECTED_VERSION but package.json says $PKG_VERSION"
+            exit 1
+          fi
+          echo "tag and package.json agree on $PKG_VERSION"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Publish to npm (OIDC + provenance)
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          DIST_TAG=latest
+          case "$VERSION" in
+            *-*) DIST_TAG=next ;;
+          esac
+          echo "Publishing $VERSION with dist-tag '$DIST_TAG'"
+          # No NODE_AUTH_TOKEN: npm exchanges the workflow OIDC token for a
+          # short-lived publish token. --provenance attaches the Sigstore
+          # attestation that links the tarball to this workflow run and commit.
+          npm publish --provenance --tag "$DIST_TAG"
+
+      - name: Verify provenance attestation
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            ATTESTATIONS="$(npm view "dsh-opencode-auto-review@${VERSION}" dist.attestations --json 2>/dev/null || true)"
+            if [ -n "$ATTESTATIONS" ] && [ "$ATTESTATIONS" != "null" ] \
+              && printf '%s' "$ATTESTATIONS" | grep -q '"provenance"'; then
+              echo "Provenance attestation present for ${VERSION}:"
+              echo "$ATTESTATIONS"
+              exit 0
+            fi
+            echo "attempt $attempt: attestation not visible yet, retrying in 10s"
+            sleep 10
+          done
+          echo "::error::publish succeeded but no provenance attestation for ${VERSION}"
+          exit 1
+
+      - name: Write job summary
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          {
+            echo "### Published dsh-opencode-auto-review@${VERSION}"
+            echo ""
+            echo "- npm: https://www.npmjs.com/package/dsh-opencode-auto-review/v/${VERSION}"
+            echo "- Provenance: https://www.npmjs.com/package/dsh-opencode-auto-review/v/${VERSION}"
+          } >> "$GITHUB_STEP_SUMMARY"

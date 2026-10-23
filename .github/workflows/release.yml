@@ -1,0 +1,277 @@
+# Package the GitHub Release after a version has been published to npm.
+#
+# Flow:
+#   pnpm version patch && git push --follow-tags
+#     -> "Publish to npm" (publish.yml): typecheck, test, build, npm publish
+#     -> this workflow (on "Publish to npm" completion, success only):
+#          download the exact tarball npm published, verify its registry
+#          integrity, and create the GitHub Release for the tag with:
+#            * dsh-opencode-auto-review-<version>.tgz
+#            * SHA256SUMS.txt
+#            * generated release notes plus npm / install details
+#
+# Why workflow_run instead of another tag trigger: the GitHub Release must not
+# exist for a version npm rejected (duplicate version, failed test, missing
+# trusted publisher, ...). workflow_run only fires after publish finishes and
+# the job is gated on conclusion == 'success', so the release always points at
+# an artifact that is actually on npm. The "Publish to npm" workflow name below
+# must match the `name:` field in publish.yml exactly.
+#
+# Security note: this workflow runs with `contents: write`. It never executes
+# code from the triggering run: it resolves a tag from this repository, checks
+# out that tag only to compare package.json with the tag, downloads the tarball
+# straight from registry.npmjs.org, and verifies the sha512 from the registry
+# metadata before attaching anything.
+#
+# Both this file and publish.yml must be committed to the default branch for
+# the trigger to exist. See RELEASING.md for the runbook.
+#
+# Manual use (e.g. to bootstrap a release for an older tag that predates this
+# workflow, or to retry a failed run): Actions -> "Package GitHub Release" ->
+# Run workflow -> enter the existing tag (e.g. v0.1.0).
+
+name: Package GitHub Release
+
+on:
+  workflow_run:
+    workflows: ["Publish to npm"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to create the GitHub Release for (e.g. v0.1.1)."
+        required: true
+        type: string
+
+concurrency:
+  group: github-release-${{ inputs.tag || github.event.workflow_run.head_branch || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and publish GitHub Release
+    # Do not create releases for forks, and never for a failed publish run.
+    if: |
+      github.repository == 'DrScorpio/dsh-opencode-auto-review' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # The tag is the unit everything else keys off. Resolve it in order:
+          #  1. a manual run names it explicitly;
+          #  2. the publish run's branch/tag name, when it is a v* tag;
+          #  3. a v* tag pointing at the commit the publish run built.
+          TAG=""
+          SHA=""
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            CANDIDATE="$INPUT_TAG"
+          else
+            CANDIDATE="$RUN_HEAD_BRANCH"
+            SHA="$RUN_HEAD_SHA"
+          fi
+
+          tag_exists() {
+            gh api "repos/$REPO/git/ref/tags/$1" >/dev/null 2>&1
+          }
+
+          case "$CANDIDATE" in
+            v*)
+              if tag_exists "$CANDIDATE"; then
+                TAG="$CANDIDATE"
+              fi
+              ;;
+          esac
+
+          if [ -z "$TAG" ] && [ -n "$SHA" ]; then
+            TAGS_AT_SHA="$(gh api --paginate "repos/$REPO/tags?per_page=100" \
+              --jq ".[] | select(.commit.sha == \"$SHA\") | .name | select(startswith(\"v\"))")"
+            TAG_COUNT="$(printf '%s\n' "$TAGS_AT_SHA" | sed '/^$/d' | wc -l)"
+            if [ "$TAG_COUNT" -eq 1 ]; then
+              TAG="$TAGS_AT_SHA"
+            elif [ "$TAG_COUNT" -gt 1 ]; then
+              echo "::error::multiple v* tags point at $SHA (${TAGS_AT_SHA//$'\n'/ }); re-run this workflow manually with the tag input"
+              exit 1
+            fi
+          fi
+
+          if [ -z "$TAG" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "::error::tag '$CANDIDATE' does not exist in $REPO"
+            else
+              echo "::error::could not determine the release tag for this run; re-run this workflow manually with the tag input"
+            fi
+            exit 1
+          fi
+
+          case "$TAG" in
+            v*) ;;
+            *)
+              echo "::error::release tag must start with 'v', got '$TAG'"
+              exit 1
+              ;;
+          esac
+
+          # A tag pushed from a different commit than the one that was published
+          # would attach a release to the wrong source tree.
+          if [ -n "$SHA" ]; then
+            TAG_SHA="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
+            if [ "$TAG_SHA" != "$SHA" ]; then
+              echo "::error::tag $TAG points at $TAG_SHA, but the publish run built $SHA"
+              exit 1
+            fi
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG (version ${TAG#v})"
+
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check tag matches package.json
+        env:
+          EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::tag is v$EXPECTED_VERSION but package.json says $PKG_VERSION"
+            exit 1
+          fi
+          echo "tag and package.json agree on $PKG_VERSION"
+
+      # The asset is the exact tarball npm published, not a local rebuild: that
+      # keeps the GitHub Release byte-identical to the registry artifact and to
+      # the provenance attestation that publish.yml verified.
+      - name: Download the published tarball
+        id: artifact
+        env:
+          PACKAGE: dsh-opencode-auto-review
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          ASSETS="$RUNNER_TEMP/release-assets"
+          FILENAME="$PACKAGE-$VERSION.tgz"
+          mkdir -p "$ASSETS"
+
+          TARBALL_URL=""
+          for attempt in $(seq 1 18); do
+            TARBALL_URL="$(npm view "$PACKAGE@$VERSION" dist.tarball 2>/dev/null || true)"
+            if [ -n "$TARBALL_URL" ] \
+              && curl -fsSL --retry 3 --retry-delay 2 -o "$ASSETS/$FILENAME" "$TARBALL_URL"; then
+              break
+            fi
+            if [ "$attempt" -eq 18 ]; then
+              echo "::error::$PACKAGE@$VERSION is not downloadable from the npm registry"
+              exit 1
+            fi
+            echo "attempt $attempt: $PACKAGE@$VERSION is not served by the registry yet; retrying in 10s"
+            sleep 10
+          done
+
+          EXPECTED="$(npm view "$PACKAGE@$VERSION" dist.integrity)"
+          ACTUAL="sha512-$(node -e '
+            const { createHash } = require("node:crypto")
+            const { readFileSync } = require("node:fs")
+            const digest = createHash("sha512").update(readFileSync(process.argv[1])).digest("base64")
+            process.stdout.write(digest)
+          ' "$ASSETS/$FILENAME")"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::tarball integrity mismatch: registry says $EXPECTED, download is $ACTUAL"
+            exit 1
+          fi
+
+          ( cd "$ASSETS" && sha256sum ./*.tgz > SHA256SUMS.txt )
+          echo "assets=$ASSETS" >> "$GITHUB_OUTPUT"
+          echo "tarball=$FILENAME" >> "$GITHUB_OUTPUT"
+          echo "Verified $FILENAME against $EXPECTED"
+
+      - name: Create or refresh GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PACKAGE: dsh-opencode-auto-review
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          ASSETS: ${{ steps.artifact.outputs.assets }}
+        run: |
+          set -euo pipefail
+
+          SHA256="$(cut -d' ' -f1 "$ASSETS/SHA256SUMS.txt")"
+          NOTES="$(printf '%s\n' \
+            "**${PACKAGE}@${VERSION}** — packaged from the artifact published to npm." \
+            "" \
+            "- npm: https://www.npmjs.com/package/${PACKAGE}/v/${VERSION}" \
+            "- Install: dsh plugin --profile PROFILE add ${PACKAGE}@${VERSION}" \
+            "- Offline: dsh plugin --profile PROFILE add ./${PACKAGE}-${VERSION}.tgz" \
+            "- sha256: ${SHA256}" \
+            "- Install guide: https://github.com/${REPO}#installation")"
+
+          RELEASE_FLAGS=(--latest)
+          case "$VERSION" in
+            *-*) RELEASE_FLAGS=(--prerelease --latest=false) ;;
+          esac
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG already exists; refreshing its assets"
+            gh release upload "$TAG" \
+              "$ASSETS/$PACKAGE-$VERSION.tgz" "$ASSETS/SHA256SUMS.txt" \
+              --clobber
+            # A previous attempt may have failed between asset upload and
+            # publish; gh creates releases as drafts while uploading assets.
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = "true" ]; then
+              RELEASE_ID="$(gh release view "$TAG" --json databaseId --jq .databaseId)"
+              gh api -X PATCH "repos/$REPO/releases/$RELEASE_ID" -F draft=false >/dev/null
+              echo "Published draft release $TAG"
+            fi
+          else
+            gh release create "$TAG" \
+              "$ASSETS/$PACKAGE-$VERSION.tgz" "$ASSETS/SHA256SUMS.txt" \
+              --verify-tag \
+              --title "$TAG" \
+              --generate-notes \
+              --notes "$NOTES" \
+              "${RELEASE_FLAGS[@]}"
+          fi
+
+          gh release view "$TAG" \
+            --json url,name,isDraft,isPrerelease,assets \
+            --jq '{url, name, isDraft, isPrerelease, assets: [.assets[].name]}'
+
+      - name: Write job summary
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "### GitHub Release ${TAG}"
+            echo ""
+            echo "- Release: https://github.com/${REPO}/releases/tag/${TAG}"
+            echo "- npm: https://www.npmjs.com/package/dsh-opencode-auto-review/v/${VERSION}"
+            echo "- Assets: \`dsh-opencode-auto-review-${VERSION}.tgz\`, \`SHA256SUMS.txt\`"
+          } >> "$GITHUB_STEP_SUMMARY"
