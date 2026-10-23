@@ -49,11 +49,10 @@ PTC handling, cancellation and disposal — is the official implementation, unch
 
 ## Quick start
 
-The `0.1.0` release is published on npm as
-[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review)
-and supports DSH `0.2.1-rc.2`. This source tree is `0.1.1`, which adds `0.2.1-rc.1`
-support while keeping `0.2.1-rc.2`; install the `0.1.1` tarball until that release is
-published. Installation and effective composition are the verified path; the
+The latest release, `0.1.1`, is published on npm with the `latest` dist-tag:
+[`dsh-opencode-auto-review@0.1.1`](https://www.npmjs.com/package/dsh-opencode-auto-review);
+it supports DSH `0.2.1-rc.1` and `0.2.1-rc.2`. `0.1.0` is the previous release and supports
+`0.2.1-rc.2` only. Installation and effective composition are the verified path; the
 load/reselect step and a full booted-profile launch are not covered by that evidence (see
 [Verification status](#verification-status)).
 
@@ -277,19 +276,21 @@ tarball is the same artifact for offline or air-gapped profiles (no build step, 
 developer source path in either case):
 
 ```sh
-# From the npm registry (0.1.0 is published for 0.2.1-rc.2; 0.1.1 adds 0.2.1-rc.1)
+# From the npm registry (0.1.1 is published; supports 0.2.1-rc.1 and 0.2.1-rc.2)
 dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
 
 # Or from the release tarball, when the registry is not reachable
 dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
 ```
 
-The tarball is the same prebuilt artifact the registry release publishes (its size and
-SHA-256 are recorded in [VERIFICATION.md](VERIFICATION.md)). If you only need the package
-as a dependency in another project, `npm install dsh-opencode-auto-review@0.1.1` installs
-that same prebuilt package. Do not substitute a git checkout: `lib/` is gitignored
-and the package has no `prepare`/`install` build hook, so a source install has no built
-entry point.
+The tarball is the same prebuilt artifact the registry release publishes: `0.1.1` is
+29,159 B, SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`,
+byte-identical to the tarball on the npm registry and to the GitHub Release asset; `0.1.0`
+is 27,545 B, SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`.
+If you only need the package as a dependency in another project,
+`npm install dsh-opencode-auto-review@0.1.1` installs that same prebuilt package. Do not
+substitute a git checkout: `lib/` is gitignored and the package has no
+`prepare`/`install` build hook, so a source install has no built entry point.
 
 Step 3 — inspect the effective composition, not just the bundle list:
 

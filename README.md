@@ -31,7 +31,7 @@
 
 ## 快速开始
 
-`0.1.0` 发布物已发布到 npm：[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review)，支持 DSH `0.2.1-rc.2`。当前源码树为 `0.1.1`，在保留 `0.2.1-rc.2` 的同时新增 `0.2.1-rc.1` 支持；在 `0.1.1` 发布前请安装其 tarball。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
+`dsh-opencode-auto-review` 的最新版本是 `0.1.1`，已发布到 npm（`latest` dist-tag）：[`dsh-opencode-auto-review@0.1.1`](https://www.npmjs.com/package/dsh-opencode-auto-review)，在保留 `0.2.1-rc.2` 的同时新增 `0.2.1-rc.1` 支持；`0.1.0` 是上一版，仅支持 `0.2.1-rc.2`。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
 
 前置条件：与所运行 DSH 版本（`0.2.1-rc.1` 或 `0.2.1-rc.2`）匹配的官方 `@deepseek-ai/dsh-experimental-auto-review` 组合层必须已在该 profile 中启用，
 并且在有序 bundle 列表中位于本包之前（[安装](#安装)步骤 1）。缺少该层时，本包 patch 的停用条目只会告警，
@@ -168,14 +168,14 @@ dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2
 步骤 2 —— 安装本包。标准路径是 npm registry 包；预构建 tarball 是同一产物，供离线或内网 profile 使用（两者都无需构建，也不依赖开发者源码路径）：
 
 ```sh
-# 从 npm registry 安装（0.1.0 已发布，面向 0.2.1-rc.2；0.1.1 新增 0.2.1-rc.1）
+# 从 npm registry 安装（0.1.1 已发布，支持 0.2.1-rc.1 与 0.2.1-rc.2）
 dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
 
 # 或从发布 tarball 安装（registry 不可达时使用）
 dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
 ```
 
-registry 包与 tarball 是同一个预构建产物（0.1.0 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`；0.1.1 的大小与 SHA-256 见 [VERIFICATION.md](VERIFICATION.md)）。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.1` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
+registry 包与发布 tarball 是同一个预构建产物：`0.1.1` 为 29,159 B、SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`，与 npm registry 上的 tarball 逐字节一致，也是 GitHub Release 的附件；`0.1.0` 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.1` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
 
 步骤 3 —— 检查生效组合，而不只是 bundle 列表：
 

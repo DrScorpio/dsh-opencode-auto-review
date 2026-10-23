@@ -1,30 +1,41 @@
-# Package the GitHub Release after a version has been published to npm.
+# Package the GitHub Release for a version tag.
 #
 # Flow:
 #   pnpm version patch && git push --follow-tags
+#     -> this workflow's "build" job, on the v* tag push: checkout the tag,
+#        install from the lockfile, run `pnpm build` and `npm pack`, verify the
+#        package contents and upload the release package as a workflow artifact.
+#        It never talks to npm, so it can run while the publish workflow is
+#        still going.
 #     -> "Publish to npm" (publish.yml): typecheck, test, build, npm publish
-#     -> this workflow (on "Publish to npm" completion, success only):
-#          download the exact tarball npm published, verify its registry
-#          integrity, and create the GitHub Release for the tag with:
+#     -> this workflow's "release" job (on "Publish to npm" completion, success
+#        only): check out the same tag, build the package from that tag, verify
+#        the built bytes against the tarball the registry serves
+#        (`dist.integrity`), and create the GitHub Release for the tag with:
 #            * dsh-opencode-auto-review-<version>.tgz
 #            * SHA256SUMS.txt
 #            * generated release notes plus npm / install details
+#        If a build ever differs from the published bytes (for example a future
+#        toolchain change), the job falls back to the registry tarball after
+#        verifying its integrity, so the release always carries the exact
+#        artifact npm published.
 #
-# Why workflow_run instead of another tag trigger: the GitHub Release must not
-# exist for a version npm rejected (duplicate version, failed test, missing
-# trusted publisher, ...). workflow_run only fires after publish finishes and
-# the job is gated on conclusion == 'success', so the release always points at
-# an artifact that is actually on npm. The "Publish to npm" workflow name below
-# must match the `name:` field in publish.yml exactly.
+# Why the release job waits for workflow_run instead of running on the tag push:
+# the GitHub Release must not exist for a version npm rejected (duplicate
+# version, failed test, missing trusted publisher, ...). workflow_run only fires
+# after publish finishes and the job is gated on conclusion == 'success', so the
+# release always points at an artifact that is actually on npm. The "Publish to
+# npm" workflow name below must match the `name:` field in publish.yml exactly.
 #
 # Security note: this workflow runs with `contents: write`. It never executes
-# code from the triggering run: it resolves a tag from this repository, checks
-# out that tag only to compare package.json with the tag, downloads the tarball
-# straight from registry.npmjs.org, and verifies the sha512 from the registry
-# metadata before attaching anything.
+# code from the triggering run: it resolves a tag from this repository (pushing
+# a tag requires write access), checks that tag out, and builds the package from
+# it. The resulting tarball is cross-checked against registry.npmjs.org metadata
+# (`dist.integrity`) before any asset is attached.
 #
 # Both this file and publish.yml must be committed to the default branch for
-# the trigger to exist. See RELEASING.md for the runbook.
+# the release trigger to exist; the tag-push build job uses the version of this
+# file on the tag's commit. See RELEASING.md for the runbook.
 #
 # Manual use (e.g. to bootstrap a release for an older tag that predates this
 # workflow, or to retry a failed run): Actions -> "Package GitHub Release" ->
@@ -33,6 +44,9 @@
 name: Package GitHub Release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_run:
     workflows: ["Publish to npm"]
     types: [completed]
@@ -44,18 +58,135 @@ on:
         type: string
 
 concurrency:
-  group: github-release-${{ inputs.tag || github.event.workflow_run.head_branch || github.run_id }}
+  group: github-release-${{ inputs.tag || github.event.workflow_run.head_branch || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    name: Package and publish GitHub Release
-    # Do not create releases for forks, and never for a failed publish run.
+  # Runs on the v* tag push. Builds the release package from the tagged commit
+  # and uploads it for inspection; it never touches npm, so it is safe to run
+  # while "Publish to npm" is still working. The "release" job below is what
+  # actually creates the GitHub Release, and only after npm accepted the version.
+  build:
+    name: Build release package from tag
     if: |
       github.repository == 'DrScorpio/dsh-opencode-auto-review' &&
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve release tag
+        id: release
+        env:
+          TAG_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="$TAG_REF"
+          case "$TAG" in
+            v*) ;;
+            *)
+              echo "::error::release tag must start with 'v', got '$TAG'"
+              exit 1
+              ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG (version ${TAG#v})"
+
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check tag matches package.json
+        env:
+          EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::tag is v$EXPECTED_VERSION but package.json says $PKG_VERSION"
+            exit 1
+          fi
+          echo "tag and package.json agree on $PKG_VERSION"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and pack the release package
+        run: |
+          set -euo pipefail
+          pnpm build
+          npm pack --ignore-scripts
+
+      - name: Verify the release package
+        id: package
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          TARBALL="dsh-opencode-auto-review-${VERSION}.tgz"
+          EXPECTED="$(printf '%s\n' LICENSE README.md README_en.md UPSTREAM.md cordis.patch.yml lib/index.d.ts lib/index.js package.json | sort)"
+          ACTUAL="$(tar -tzf "$TARBALL" | sed -e 's#^package/##' | sort)"
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "::error::unexpected package contents"
+            diff <(printf '%s\n' "$EXPECTED") <(printf '%s\n' "$ACTUAL") || true
+            exit 1
+          fi
+          PACKED_VERSION="$(tar -xzOf "$TARBALL" package/package.json | node -e 'let s = ""; process.stdin.on("data", (d) => { s += d }).on("end", () => { process.stdout.write(JSON.parse(s).version) })')"
+          if [ "$PACKED_VERSION" != "$VERSION" ]; then
+            echo "::error::packed package.json version is $PACKED_VERSION, expected $VERSION"
+            exit 1
+          fi
+          sha256sum "$TARBALL" | tee SHA256SUMS.txt
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the release package
+        uses: actions/upload-artifact@v7
+        with:
+          name: dsh-opencode-auto-review-${{ steps.release.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.tarball }}
+            SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Write job summary
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TARBALL: ${{ steps.package.outputs.tarball }}
+        run: |
+          {
+            echo "### Release package built from ${TAG}"
+            echo ""
+            echo "- Artifact: \`${TARBALL}\` and \`SHA256SUMS.txt\` (workflow artifact)"
+            echo "- SHA-256: \`$(sha256sum "$TARBALL" | cut -d' ' -f1)\`"
+            echo "- The GitHub Release is created by the \`release\` job once \"Publish to npm\" succeeds."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Package and publish GitHub Release
+    # Do not create releases for forks, never on a tag push (the "build" job
+    # handles that half), and never for a failed publish run.
+    if: |
+      github.repository == 'DrScorpio/dsh-opencode-auto-review' &&
+      github.event_name != 'push' &&
       (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -147,6 +278,11 @@ jobs:
           ref: ${{ steps.release.outputs.tag }}
           persist-credentials: false
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.22.0
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -164,10 +300,19 @@ jobs:
           fi
           echo "tag and package.json agree on $PKG_VERSION"
 
-      # The asset is the exact tarball npm published, not a local rebuild: that
-      # keeps the GitHub Release byte-identical to the registry artifact and to
-      # the provenance attestation that publish.yml verified.
-      - name: Download the published tarball
+      # Build the release package from the tagged commit, then prove it is the
+      # artifact npm serves: the registry's dist.integrity is the sha512 of the
+      # published tarball, so a byte-identical local build shows the tag
+      # reproduces the published bytes. The fallback download keeps the release
+      # correct if a future toolchain ever makes the build non-deterministic.
+      - name: Build the release package from the tag
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm build
+          npm pack --ignore-scripts
+
+      - name: Verify the build is the published artifact
         id: artifact
         env:
           PACKAGE: dsh-opencode-auto-review
@@ -176,39 +321,56 @@ jobs:
           set -euo pipefail
           ASSETS="$RUNNER_TEMP/release-assets"
           FILENAME="$PACKAGE-$VERSION.tgz"
+          BUILT="$PWD/$FILENAME"
           mkdir -p "$ASSETS"
 
-          TARBALL_URL=""
+          if [ ! -f "$BUILT" ]; then
+            echo "::error::the tag did not produce $FILENAME"
+            exit 1
+          fi
+
+          # Wait for npm to serve the version this run builds.
+          REGISTRY_INTEGRITY=""
           for attempt in $(seq 1 18); do
-            TARBALL_URL="$(npm view "$PACKAGE@$VERSION" dist.tarball 2>/dev/null || true)"
-            if [ -n "$TARBALL_URL" ] \
-              && curl -fsSL --retry 3 --retry-delay 2 -o "$ASSETS/$FILENAME" "$TARBALL_URL"; then
+            REGISTRY_INTEGRITY="$(npm view "$PACKAGE@$VERSION" dist.integrity 2>/dev/null || true)"
+            if [ -n "$REGISTRY_INTEGRITY" ]; then
               break
             fi
             if [ "$attempt" -eq 18 ]; then
-              echo "::error::$PACKAGE@$VERSION is not downloadable from the npm registry"
+              echo "::error::$PACKAGE@$VERSION is not served by the npm registry"
               exit 1
             fi
             echo "attempt $attempt: $PACKAGE@$VERSION is not served by the registry yet; retrying in 10s"
             sleep 10
           done
 
-          EXPECTED="$(npm view "$PACKAGE@$VERSION" dist.integrity)"
-          ACTUAL="sha512-$(node -e '
-            const { createHash } = require("node:crypto")
-            const { readFileSync } = require("node:fs")
-            const digest = createHash("sha512").update(readFileSync(process.argv[1])).digest("base64")
-            process.stdout.write(digest)
-          ' "$ASSETS/$FILENAME")"
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::tarball integrity mismatch: registry says $EXPECTED, download is $ACTUAL"
-            exit 1
+          sha512() {
+            node -e '
+              const { createHash } = require("node:crypto")
+              const { readFileSync } = require("node:fs")
+              process.stdout.write("sha512-" + createHash("sha512").update(readFileSync(process.argv[1])).digest("base64"))
+            ' "$1"
+          }
+
+          BUILT_INTEGRITY="$(sha512 "$BUILT")"
+          if [ "$BUILT_INTEGRITY" = "$REGISTRY_INTEGRITY" ]; then
+            echo "Build from $FILENAME's tag is byte-identical to the registry tarball ($REGISTRY_INTEGRITY)"
+            cp "$BUILT" "$ASSETS/$FILENAME"
+          else
+            echo "::warning::build from the tag ($BUILT_INTEGRITY) differs from the registry tarball ($REGISTRY_INTEGRITY); attaching the registry tarball instead"
+            TARBALL_URL="$(npm view "$PACKAGE@$VERSION" dist.tarball)"
+            curl -fsSL --retry 3 --retry-delay 2 -o "$ASSETS/$FILENAME" "$TARBALL_URL"
+            DOWNLOAD_INTEGRITY="$(sha512 "$ASSETS/$FILENAME")"
+            if [ "$DOWNLOAD_INTEGRITY" != "$REGISTRY_INTEGRITY" ]; then
+              echo "::error::registry tarball integrity mismatch: registry says $REGISTRY_INTEGRITY, download is $DOWNLOAD_INTEGRITY"
+              exit 1
+            fi
           fi
 
           ( cd "$ASSETS" && sha256sum ./*.tgz > SHA256SUMS.txt )
           echo "assets=$ASSETS" >> "$GITHUB_OUTPUT"
           echo "tarball=$FILENAME" >> "$GITHUB_OUTPUT"
-          echo "Verified $FILENAME against $EXPECTED"
+          echo "Verified $FILENAME against $REGISTRY_INTEGRITY"
 
       - name: Create or refresh GitHub Release
         env:
@@ -223,7 +385,7 @@ jobs:
 
           SHA256="$(cut -d' ' -f1 "$ASSETS/SHA256SUMS.txt")"
           NOTES="$(printf '%s\n' \
-            "**${PACKAGE}@${VERSION}** — packaged from the artifact published to npm." \
+            "**${PACKAGE}@${VERSION}** — built from tag ${TAG} in this run and verified byte-identical to the artifact published to npm." \
             "" \
             "- npm: https://www.npmjs.com/package/${PACKAGE}/v/${VERSION}" \
             "- Install: dsh plugin --profile PROFILE add ${PACKAGE}@${VERSION}" \
