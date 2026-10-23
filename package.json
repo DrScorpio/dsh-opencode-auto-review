@@ -1,6 +1,6 @@
 {
   "name": "dsh-opencode-auto-review",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Derived DeepSeek Harness Auto review plugin that attaches the reviewed Agent's session identity to every reviewer request, fixing OpenCode's MissingSessionID rejection.",
   "type": "module",
   "main": "./lib/index.js",
@@ -17,7 +17,7 @@
     "lib",
     "cordis.patch.yml",
     "README.md",
-    "README.zh.md",
+    "README_en.md",
     "UPSTREAM.md",
     "LICENSE"
   ],
@@ -41,7 +41,7 @@
     "missing-session-id"
   ],
   "engines": {
-    "dsh": "0.2.1-rc.2",
+    "dsh": "0.2.1-rc.1 || 0.2.1-rc.2",
     "node": ">=22.19.0"
   },
   "dsh": {
@@ -59,16 +59,16 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-agent-instructions": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-permission-presets": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-session": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-agent": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-agent-instructions": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-permission-presets": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.1 || 0.2.1-rc.2"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-util-values": "0.2.1-rc.1 || 0.2.1-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",

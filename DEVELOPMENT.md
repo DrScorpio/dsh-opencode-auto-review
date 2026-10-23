@@ -172,7 +172,7 @@ tests/opencode-transport.spec.ts
 tests/composition.spec.ts
 tests/fixtures/
 README.md
-README.zh.md
+README_en.md
 UPSTREAM.md
 LICENSE
 DEVELOPMENT.md
@@ -199,7 +199,7 @@ DEVELOPMENT.md
     "lib",
     "cordis.patch.yml",
     "README.md",
-    "README.zh.md",
+    "README_en.md",
     "UPSTREAM.md",
     "LICENSE"
   ],

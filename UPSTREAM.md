@@ -17,10 +17,16 @@ does not carry a session identity, so the pi-ai OpenCode providers cannot emit
 | Adapter under test | `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2` |
 | pi-ai under test | `@earendil-works/pi-ai@1.1.0` |
 | Cordis baseline | `@deepseek-ai/cordis@4.0.5` |
-| Derived package | `dsh-opencode-auto-review@0.1.0` |
+| Derived package | `dsh-opencode-auto-review@0.1.1` |
 
 An older local DSH source working tree is **not** a source for this project; all files
 below were read from the tagged commit above.
+
+Supported runtime window: this package runs on DSH `0.2.1-rc.1` and `0.2.1-rc.2`. Those
+two releases are one API generation — every `@deepseek-ai/*` package except its
+`package.json` `version` text is byte-identical — so the derived sources and the
+consistency checks below hold for both. The upstream baseline above remains the
+`0.2.1-rc.2` tag used for derivation.
 
 ## Derived files
 

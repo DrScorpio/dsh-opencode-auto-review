@@ -28,7 +28,7 @@ GitHub Release 使用工作流内置的 `GITHUB_TOKEN`（`contents: write`）。
 方式 A：CLI（npm >= 11.15.0）
 
 ```bash
-npm login
+npm login --auth-type=web   # 必须交互式 2FA，见下方说明
 npm trust github dsh-opencode-auto-review \
   --file publish.yml \
   --repo DrScorpio/dsh-opencode-auto-review \
@@ -37,6 +37,11 @@ npm trust github dsh-opencode-auto-review \
 npm trust list dsh-opencode-auto-review   # 确认配置
 ```
 
+- 必须用交互式 2FA 认证（`--auth-type=web`）。registry 会拒绝「bypass 2FA」的
+  Granular Access Token：trust 相关接口（包括 `npm trust list` 的 GET）会返回
+  `403 ... Please enable 2fa for your account`，即使账号本身已经开启 2FA。
+  若本机 `~/.npmrc` 里已有旧的 `_authToken`，先备份并删除该行再登录
+  （不要用 `npm logout`，它会吊销那枚 token）。
 - `--file` 只写工作流文件名 `publish.yml`，不是 `.github/workflows/publish.yml`。
 - `--allow-publish` 必须给，否则登记成功但没有发布权限。
 - 一个包当前只支持一个 trusted publisher 配置；要换配置先
@@ -148,6 +153,7 @@ npm 包页面会显示 “Built and signed on GitHub Actions” 徽章。
 | 现象 | 原因与处理 |
 | --- | --- |
 | publish 返回 `404 PUT` / `E404` | npm 上的 trusted publisher 与工作流身份不匹配：owner、repo、文件名（只写 basename）必须完全一致。改完配置后 48 小时内要发布一次。 |
+| `npm trust` 返回 `403 ... Please enable 2fa for your account`（账号其实已开 2FA） | 当前用的是「bypass 2FA」的 Granular Access Token（`npm_` 开头）。2026-07 起这类 token 不能创建或修改 trusted publishing 配置，必须交互式 2FA：备份 `~/.npmrc`，删除 `//registry.npmjs.org/:_authToken=...` 行（不要 `npm logout`，它会吊销 token），再 `npm login --auth-type=web` 后重试；或直接用网页添加。 |
 | `provenance` 生成失败，提示缺 repository | `package.json` 缺少 `repository` 字段，或与 GitHub 仓库不一致。 |
 | 发布失败并提示 npm 版本过旧 | trusted publishing 要求 npm >= 11.5.1；Node 22 自带 npm 10.x 不满足，本工作流使用 Node 24。 |
 | `cannot publish over ...` | 该版本已存在，npm 不允许覆盖，必须升版本号。 |

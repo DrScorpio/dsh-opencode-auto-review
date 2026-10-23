@@ -17,6 +17,9 @@ open acceptance items below remain open. Dynamic evidence from the Lead's final 
 teammates is quoted below; everything that was not run remains `NOT COMPLETED` and is
 listed in [Not completed / limitations](#not-completed--limitations).
 
+This file keeps the `0.1.0` record intact and appends a `0.1.1` addendum at the end
+(DSH `0.2.1-rc.1` support window), written on 2026-10-23.
+
 ## Final result
 
 | Area | Result |
@@ -512,3 +515,76 @@ pre-publication snapshot.
   so `npm pack` with the `prepack` hook cannot run until `pnpm install` relinks
   `node_modules`; the documentation-only passes therefore used `npm pack --ignore-scripts`
   and hash-checked the unchanged `lib/`/`package.json` bytes instead (A8).
+
+## Addendum — 0.1.1: DSH `0.2.1-rc.1` support window
+
+Date: 2026-10-23. Package: `dsh-opencode-auto-review@0.1.1`. Runtime window under test:
+DSH `0.2.1-rc.1` **and** DSH `0.2.1-rc.2`; adapter `@deepseek-ai/dsh-llm-pi-ai` at the host
+release, pi-ai `@earendil-works/pi-ai@1.1.0`, Cordis `@deepseek-ai/cordis@4.0.5` on both.
+
+### What changed for 0.1.1
+
+- `package.json`: `version` `0.1.1`; `engines.dsh`, all seven `@deepseek-ai/dsh-*`
+  `peerDependencies` and the `@deepseek-ai/dsh-util-values` runtime dependency moved from
+  exact `0.2.1-rc.2` to `0.2.1-rc.1 || 0.2.1-rc.2`. The Cordis peer stays `4.0.5`;
+  `devDependencies` stay on `0.2.1-rc.2` (the build/test host).
+- `tests/composition.spec.ts`: the exact-release manifest assertion was replaced by the
+  window declaration assertion plus a new test pinning every shared DSH peer and runtime
+  dependency to that window.
+- `pnpm-lock.yaml`: the importer specifier for `@deepseek-ai/dsh-util-values` moved to the
+  same window (`version` resolved stays `0.2.1-rc.2`). `pnpm install --frozen-lockfile
+  --lockfile-only --ignore-scripts` on a copy exited 0 and left the lockfile hash unchanged.
+- Runtime source and `lib/` output are unchanged: `lib/index.js` SHA-256
+  `18A92872FFAE35CF7E86C0DB69D4D98B7D618195D08A11150E13F78F26D53E50`, `lib/index.d.ts`
+  `780FF1B6BC629A0DC3231371AB5BA581B820842C329123A138CE7C568295A811`.
+- Documentation: README.md / README_en.md version-support, quick start and install sections;
+  UPSTREAM.md derived-package line plus a window note. In a later pass on 2026-10-23 the two
+  READMEs swapped languages at the maintainer's request: README.md is now the Simplified
+  Chinese primary document and the English text lives in a sibling README file (both still
+  cross-link to each other). The English file was then renamed from `README.zh.md` to
+  `README_en.md`, because the old name implied a Chinese document: `package.json` `files`,
+  `tests/composition.spec.ts`, `DEVELOPMENT.md` and the current README links were updated,
+  and the tarball was repacked again so the Pack row below records the final artifact. The
+  0.1.0 record above is untouched and still refers to the `README.zh.md` file that the
+  published 0.1.0 tarball actually contains.
+
+Gate semantics recorded by the 0.1.1 investigation: on the DSH 0.2.1 line, a manifest that
+declares its own `engines.dsh` is decided by that range alone (peers are not consulted);
+the 0.2.0 line ignores `engines.dsh` and checks peers instead. The supported window is
+therefore carried in both places. This is not theoretical: the `0.1.0` manifest declared
+exactly `0.2.1-rc.2` and a real `0.2.1-rc.1` CLI rejected it with
+`requirements {"engines.dsh":"0.2.1-rc.2"}`.
+
+### Dynamic checks (run 2026-10-23 in this checkout)
+
+| Check | Result |
+| --- | --- |
+| Typecheck | **PASS** — `node ./node_modules/typescript/bin/tsc --noEmit` exit 0, zero diagnostics. |
+| Full suite | **PASS** — 4 test files, 66/66 tests passed, 0 failed/skipped, 20.12 s: `auto-review.spec.ts` 31/31; `session-routing.spec.ts` 7/7; `opencode-transport.spec.ts` 14/14; `composition.spec.ts` 14/14. Runner: sandbox preloads as in [Environment and test runner](#environment-and-test-runner), plus `--configLoader runner` (vitest's bundled config loader writes `node_modules/.vite-temp`, which this sandbox denies). Re-run after the README language swap and the `README_en.md` rename: 66/66 passed again (8.75 s). |
+| Lockfile consistency | **PASS** — `pnpm install --frozen-lockfile --lockfile-only --ignore-scripts` exit 0 in a scratch copy; lockfile unchanged. |
+| Pack | **PASS** — `npm pack --ignore-scripts` exit 0 (the `prepack` build cannot write `lib/` in this sandbox, and it is not needed: `lib/` bytes were unchanged). Final tarball `dsh-opencode-auto-review-0.1.1.tgz`: 8 files, 29,159 B, SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`. Packed `package.json` shows `version` 0.1.1, the window and the `README_en.md` file entry; packed `README.md` (`E284C11D43C054269AE939ED67B07D26DF5880FAC2574C13B8DFD16D60B5E342`), `README_en.md` (`BF1D8D772F2026CB388FDAF6F8863162F4E61C2CC737C59E23930839E0D7D205`), `UPSTREAM.md`, `lib/index.js`, `lib/index.d.ts` and `cordis.patch.yml` are byte-identical to the worktree. This final artifact postdates the language swap and the `README_en.md` rename; earlier 0.1.1 packs were 29,151 B / `ECA3AF5E…75820405` (pre-swap) and 28,977 B / `9DF24189…C5EF3` (post-swap, pre-rename). |
+| Install + effective composition on DSH 0.2.1-rc.1 | **PASS** — real CLI reporting `0.2.1-rc.1`; isolated `DSH_HOME` and fresh profile `p`; official `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.1` add exit 0; plugin tarball add exit 0 **without any version exemption**; `dsh --profile p --dump-config` exit 0 shows `# == @deepseek-ai/dsh-experimental-auto-review, patched by dsh-opencode-auto-review` with official `- id: auto-review` `disabled: true`, then `# == dsh-opencode-auto-review` `- id: auto-review-opencode` `name: dsh-opencode-auto-review`. |
+| Activation on DSH 0.2.1-rc.1 | **PASS** — loader probe through the CLI's own `lib/profile-boot.js` and `@deepseek-ai/dsh-app-boot`: 98 loader rows; `include:auto-review-opencode` (`dsh-opencode-auto-review`) state **2 = ACTIVE** (fiber uid 111); `@deepseek-ai/dsh-working-directory` ACTIVE; official `include:auto-review` disabled with NO_FIBER. |
+| Install + composition on DSH 0.2.1-rc.2 (regression) | **PASS** — global CLI `0.2.1-rc.2`, fresh isolated home/profile: official bundle add exit 0, plugin tarball add exit 0, `--dump-config` rows identical in shape to the rc.1 run. |
+| Activation on DSH 0.2.1-rc.2 | **PASS** — 99 loader rows; `include:auto-review-opencode` state 2 ACTIVE (fiber uid 115); working-directory ACTIVE. |
+| Negative control: DSH 0.2.0-rc.1 and 0.2.0-rc.2 | **PASS (rejected as intended)** — plugin tarball add exit 1 on both: `Plugin dsh-opencode-auto-review@0.1.1 is incompatible with dsh 0.2.0-rc.1: peerDependencies {&#8230;"0.2.1-rc.1 || 0.2.1-rc.2"&#8230;}. Running it may cause crashes or data loss.` (same for 0.2.0-rc.2); no exemption granted. The 0.2.0 line is outside the declared window: it lacks the `workingDirectory` service the plugin injects and pi-ai on that line never emits `x-opencode-session`. |
+| npm publication of 0.1.1 | **NOT COMPLETED** — not published in this session (no registry credentials/authorization). The registry still serves `0.1.0`, which remains rc.2-only; the READMEs say so. |
+| Real OpenCode gateway allow/deny (E2/F9) | **NOT COMPLETED** — inherited from the 0.1.0 record; no gateway credentials in this environment. |
+| Full booted-profile call chain (E1) | **NOT COMPLETED** — inherited; the activation probe boots a profile and inspects loader fibers, but no conversation → reviewer → tool-result run was performed. |
+
+### Evidence provenance
+
+- All 0.1.1 dynamic checks above were run by the Lead on 2026-10-23 in this session against
+  real CLIs (`0.2.1-rc.1`, `0.2.1-rc.2`, and the two `0.2.0-rc.*` controls) installed under a
+  temporary workspace scratch area. The scratch area was removed after the checks, so raw
+  logs are not retained; the commands and quoted outputs above are the evidence.
+- Activation evidence comes from a probe that imports the CLI's own `lib/profile-boot.js`
+  and `@deepseek-ai/dsh-app-boot`, boots the isolated profile, and reports every loader
+  entry with its fiber state (state map: 0 = pending/inactive, 2 = active, 3 = failed,
+  4 = disposed).
+- The 0.1.0 record above is unchanged and still describes `0.1.0`, including its
+  27,545 B / `63A76209…3A29C` artifact and its npm publication evidence. The final 0.1.1
+  tarball (29,159 B / `82457F55…808005`) is a new, unpublished artifact; it is not
+  interchangeable with the published 0.1.0 bytes, nor with the earlier 0.1.1 packs
+  (29,151 B / `ECA3AF5E…75820405` before the language swap; 28,977 B / `9DF24189…C5EF3`
+  after the swap and before the `README_en.md` rename).

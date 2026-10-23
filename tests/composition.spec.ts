@@ -13,8 +13,8 @@
  * 3. after the layer is applied there is exactly one active Auto review
  *    provider, and it is this package;
  * 4. the published manifest points the host at the prebuilt `lib/` output,
- *    whitelists only publishable files, and declares the exact target DSH
- *    version.
+ *    whitelists only publishable files, and declares the supported DSH version
+ *    window (`0.2.1-rc.1` through `0.2.1-rc.2`).
  *
  * No YAML parser is a declared dependency of this project, so the small patch
  * file is parsed by the narrow block-YAML subset parser below (block maps,
@@ -34,6 +34,13 @@ const OFFICIAL_PLUGIN = '@deepseek-ai/dsh-experimental-auto-review'
 const OFFICIAL_ROW_ID = 'auto-review'
 const REPLACEMENT_PLUGIN = 'dsh-opencode-auto-review'
 const REPLACEMENT_ROW_ID = 'auto-review-opencode'
+
+// The host window this release is verified against. `0.2.1-rc.1` and
+// `0.2.1-rc.2` are the same host API: their `@deepseek-ai/*` package bytes are
+// identical apart from the version string, so one code path serves both. The
+// older `0.2.0-rc.x` line is excluded: it predates the `workingDirectory`
+// service this plugin injects and the pi-ai `sessionId` transport plumbing.
+const SUPPORTED_DSH_RANGE = '0.2.1-rc.1 || 0.2.1-rc.2'
 
 // ---------------------------------------------------------------------------
 // Narrow block-YAML subset parser (no dependency).
@@ -350,12 +357,14 @@ describe('package.json — published bundle manifest', () => {
     exports?: Record<string, Record<string, string> | string>
     files?: unknown
     engines?: Record<string, unknown>
+    peerDependencies?: Record<string, unknown>
+    dependencies?: Record<string, unknown>
     dsh?: { bundle?: { patch?: unknown } }
   }
 
   it('is the standalone ESM package this project publishes', () => {
     expect(manifest.name).toBe(REPLACEMENT_PLUGIN)
-    expect(manifest.version).toBe('0.1.0')
+    expect(manifest.version).toBe('0.1.1')
     expect(manifest.type).toBe('module')
   })
 
@@ -373,7 +382,7 @@ describe('package.json — published bundle manifest', () => {
   it('whitelists exactly the publishable artifacts', () => {
     expect(Array.isArray(manifest.files)).toBe(true)
     const files = manifest.files as string[]
-    for (const required of ['lib', 'cordis.patch.yml', 'README.md', 'README.zh.md', 'UPSTREAM.md', 'LICENSE']) {
+    for (const required of ['lib', 'cordis.patch.yml', 'README.md', 'README_en.md', 'UPSTREAM.md', 'LICENSE']) {
       expect(files).toContain(required)
     }
     for (const forbidden of [
@@ -395,8 +404,20 @@ describe('package.json — published bundle manifest', () => {
     expect(files.some((file) => file.startsWith('src/') || file.startsWith('tests/'))).toBe(false)
   })
 
-  it('requires exactly the target DSH release', () => {
-    expect(manifest.engines?.dsh).toBe('0.2.1-rc.2')
+  it('declares the verified DSH host window', () => {
+    expect(manifest.engines?.dsh).toBe(SUPPORTED_DSH_RANGE)
+  })
+
+  it('pins every shared DSH peer and runtime dependency to that window', () => {
+    const peers = manifest.peerDependencies as Record<string, unknown>
+    expect(peers['@deepseek-ai/cordis']).toBe('4.0.5')
+    const dshPeers = Object.keys(peers).filter((name) => name !== '@deepseek-ai/cordis')
+    expect(dshPeers.length).toBeGreaterThan(0)
+    for (const name of dshPeers) {
+      expect(name.startsWith('@deepseek-ai/dsh')).toBe(true)
+      expect(peers[name]).toBe(SUPPORTED_DSH_RANGE)
+    }
+    expect(manifest.dependencies?.['@deepseek-ai/dsh-util-values']).toBe(SUPPORTED_DSH_RANGE)
   })
 
   it('declares a bundle patch that exists on disk', () => {

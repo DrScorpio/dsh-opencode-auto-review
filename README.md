@@ -1,144 +1,99 @@
 # dsh-opencode-auto-review
 
-English | [中文](README.zh.md)
+简体中文 | [English](README_en.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/dsh-opencode-auto-review.svg)](https://www.npmjs.com/package/dsh-opencode-auto-review)
-[![DSH 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH 0.2.1-rc.1 | 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.1%20%7C%200.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![Node.js >=22.19.0](https://img.shields.io/badge/Node.js-%3E%3D22.19.0-brightgreen.svg)](https://nodejs.org)
 
-Make DSH Auto review work over the OpenCode gateway on DSH `0.2.1-rc.2`.
+让 DSH Auto review 在 DSH `0.2.1-rc.1` 与 `0.2.1-rc.2` 上通过 OpenCode 网关正常工作。
 
-`dsh-opencode-auto-review@0.1.0` is a minimal, stand-alone derivation of the official
-`@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` bundle. It changes exactly one
-behavior: the frozen reviewer request now carries `sessionId: agent.session.id`, so the
-pi-ai OpenCode providers can emit the required `x-opencode-session` header. Everything
-else — review policy, five-section input, risk rules, JSON protocol, approval precedence,
-PTC handling, cancellation and disposal — is the official implementation, unchanged.
+`dsh-opencode-auto-review@0.1.1` 是官方 `@deepseek-ai/dsh-experimental-auto-review` 组合包（`0.2.1-rc.1` 与 `0.2.1-rc.2` 为同一份代码）的最小独立派生。它只改变一个行为：冻结的 reviewer 请求现在携带 `sessionId: agent.session.id`，使 pi-ai 的 OpenCode 提供方能够发出必需的 `x-opencode-session` 请求头。其余全部——审查策略、五段输入、风险规则、JSON 协议、审批优先级、PTC 处理、取消与卸载——都保持官方实现不变。
 
-> **Version support.** This first release targets DSH `0.2.1-rc.2` exactly, with adapter
-> `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2` and pi-ai `@earendil-works/pi-ai@1.1.0`.
-> `engines.dsh: "0.2.1-rc.2"` only declares that target — current DSH installers and
-> loaders do not enforce it. The effective gate is the package's exact `0.2.1-rc.2`
-> `peerDependencies` on the `@deepseek-ai/dsh-*` service packages: DSH checks those ranges
-> against the running version before loading a profile, so another DSH release is refused
-> with an incompatibility diagnostic rather than merely discouraged. Widening support means
-> widening the peer ranges and re-running the parity and transport checks recorded in
-> [UPSTREAM.md](UPSTREAM.md) and [VERIFICATION.md](VERIFICATION.md); changing `engines.dsh`
-> alone has no runtime effect.
+> **版本支持。** 本版支持 DSH `0.2.1-rc.1` 与 `0.2.1-rc.2`，配套同版本的 `@deepseek-ai/dsh-llm-pi-ai` 适配器与 pi-ai `@earendil-works/pi-ai@1.1.0`。这两个宿主版本是同一份代码：`@deepseek-ai/*` 各包除 `version` 字段外逐字节相同，因此插件无需修改即可在两者上运行。`engines.dsh: "0.2.1-rc.1 || 0.2.1-rc.2"` 是 0.2.1 线上真正生效的闸门——DSH 在加载 profile 前用运行时版本与该范围比对，不匹配时以不兼容诊断拒绝安装/加载（已在真实的 `0.2.1-rc.1` CLI 上验证）。`peerDependencies` 携带同一范围，因为仍按 peer 校验的旧宿主版本线与包管理器都以它为准。`0.2.0-rc.x` 线不受支持：它缺少本包注入的 `workingDirectory` 服务，也缺少 pi-ai 的 `sessionId` 传输链路，因此即使强行安装插件也会保持未激活。要继续扩大声明，必须重跑 [UPSTREAM.md](UPSTREAM.md) 与 [VERIFICATION.md](VERIFICATION.md) 记录的一致性对照与传输验证。
 
-## Table of contents
+## 目录
 
-- [Quick start](#quick-start)
-- [What breaks and why](#what-breaks-and-why)
-- [What this package changes](#what-this-package-changes)
-- [What this package preserves](#what-this-package-preserves)
-- [Version support](#version-support)
-- [Installation](#installation)
-- [What a correct final composition looks like](#what-a-correct-final-composition-looks-like)
-- [Session identity semantics](#session-identity-semantics)
-- [Static `x-opencode-session` header caveat](#static-x-opencode-session-header-caveat)
-- [Uninstall and rollback](#uninstall-and-rollback)
-- [Verification status](#verification-status)
-- [Known limitations and deferred work](#known-limitations-and-deferred-work)
-- [Provenance and license](#provenance-and-license)
+- [快速开始](#快速开始)
+- [故障原因](#故障原因)
+- [本包的改动](#本包的改动)
+- [本包保留的行为](#本包保留的行为)
+- [版本支持](#版本支持)
+- [安装](#安装)
+- [正确的最终组合](#正确的最终组合)
+- [会话身份语义](#会话身份语义)
+- [静态 x-opencode-session 请求头注意事项](#静态-x-opencode-session-请求头注意事项)
+- [卸载与回退](#卸载与回退)
+- [验证状态](#验证状态)
+- [已知限制与延期工作](#已知限制与延期工作)
+- [来源与许可证](#来源与许可证)
 
-## Quick start
+## 快速开始
 
-The `0.1.0` release is published on npm as
-[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review).
-Installation and effective composition are the verified path; the load/reselect step and a
-full booted-profile launch are not covered by that evidence (see
-[Verification status](#verification-status)).
+`0.1.0` 发布物已发布到 npm：[`dsh-opencode-auto-review@0.1.0`](https://www.npmjs.com/package/dsh-opencode-auto-review)，支持 DSH `0.2.1-rc.2`。当前源码树为 `0.1.1`，在保留 `0.2.1-rc.2` 的同时新增 `0.2.1-rc.1` 支持；在 `0.1.1` 发布前请安装其 tarball。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
 
-Prerequisite: the official `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` bundle
-layer must already be enabled in the profile and ordered before this package
-([Installation](#installation) step 1). Without it the patch's disable entry only warns, and
-the composition check below cannot pass.
+前置条件：与所运行 DSH 版本（`0.2.1-rc.1` 或 `0.2.1-rc.2`）匹配的官方 `@deepseek-ai/dsh-experimental-auto-review` 组合层必须已在该 profile 中启用，
+并且在有序 bundle 列表中位于本包之前（[安装](#安装)步骤 1）。缺少该层时，本包 patch 的停用条目只会告警，
+下面的组合检查也无法通过。
 
 ```sh
-# 1. Install the npm package into the target profile
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+# 1. 安装本包到目标 profile
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
 
-#    Offline alternative: install the same prebuilt artifact from its tarball
-#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
+#    离线备选：从同一个预构建产物（tarball）安装
+#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
 
-# 2. Check the effective composition
+# 2. 检查生效组合
 dsh --profile <profile> --dump-config
 
-# 3. Load the composition, then explicitly select Auto review again (Installation step 4)
+# 3. 按安装步骤 4 加载组合，然后重新显式选择 Auto review
 ```
 
-`--dump-config` must show a disabled official `auto-review` row and exactly one active
-`auto-review-opencode` row; see
-[What a correct final composition looks like](#what-a-correct-final-composition-looks-like).
-Installing a bundle layer never changes a live session's selected permission preset, so the
-Auto review reselection in step 3 is an explicit user action; [Installation](#installation)
-describes the stop / load / verify sequence.
+`--dump-config` 必须显示官方 `auto-review` 行已被停用，且恰好只有一行有效的
+`auto-review-opencode`；参见[正确的最终组合](#正确的最终组合)。安装组合层从不改变存活会话已选的权限预设，
+因此第 3 步重新选择 Auto review 是用户的显式操作；停止轮次、加载与确认顺序见[安装](#安装)。
 
-## What breaks and why
+## 故障原因
 
-Auto review sends its review request through the same LLM service as the conversation,
-using the current route's provider and model. In the official `0.2.1-rc.2`
-implementation, `classifyRisk()` builds a `deepFreeze()`-d `GenerateOptions` object that
-contains the route, the fixed review policy, one review message, `temperature: 0` and the
-abort signal — but no `sessionId`.
+Auto review 通过与对话相同的 LLM 服务发送审查请求，使用当前路由的 provider 和模型。官方 `0.2.1-rc.2` 实现的 `classifyRisk()` 构造一个经过 `deepFreeze()` 的 `GenerateOptions` 对象，其中包含路由、固定审查策略、一条审查消息、`temperature: 0` 和取消信号，但不包含 `sessionId`。
 
-The pi-ai `1.1.0` OpenCode providers add `x-opencode-session` only when `sessionId` is
-set and no same-named header is already configured. With no `sessionId` there is no
-header, so the OpenCode gateway rejects the review request with `MissingSessionID`. Auto
-review treats every technical reviewer failure as a closed gate, so the pending tool body
-never executes:
+pi-ai `1.1.0` 的 OpenCode 提供方只在 `sessionId` 非空且不存在同名请求头时才添加 `x-opencode-session`。没有 `sessionId` 就没有该请求头，OpenCode 网关以 `MissingSessionID` 拒绝审查请求。Auto review 把一切审查器技术失败视为关闭闸门，因此待审工具正文不会执行：
 
 ```text
-pending tool call enters Auto review
-  -> reviewer request is built without sessionId
-  -> pi-ai does not emit x-opencode-session
-  -> the OpenCode gateway rejects the request with MissingSessionID
-  -> the reviewer fails technically
-  -> the review gate fails closed and the tool body never executes
+待审工具调用进入 Auto review
+  -> reviewer 请求未携带 sessionId
+  -> pi-ai 不生成 x-opencode-session
+  -> OpenCode 网关以 MissingSessionID 拒绝请求
+  -> reviewer 技术失败
+  -> 审查闸门关闭，工具正文不执行
 ```
 
-The concrete effect in a session on the Auto permission preset with an OpenCode-routed
-model is that tool calls are reviewed, rejected as technical failures, and never run.
-Other provider routes are unaffected. The bug is in the reviewer request construction,
-not in the provider configuration.
+实际后果是：在 Auto 权限预设下使用 OpenCode 路由模型的会话里，工具调用会被审查、以技术失败被拒绝，并且永不执行。其他 provider 路由不受影响。缺陷位于 reviewer 请求的构造处，而非 provider 配置。
 
-The fix is applied at that construction site rather than elsewhere because:
+选择在该构造处修复，是因为：
 
-- the official request is `deepFreeze()`-d, so an `llm/stream` listener cannot modify the
-  original object, and `next()` does not accept a replacement request;
-- the `llm/stream` event does not expose the Agent whose tool is under review, so a
-  process-wide "most recent session" guess would misroute concurrent sessions;
-- the only correct identity is the reviewed Agent's own `agent.session.id`; no random,
-  parent, prompt-derived or cached process-level ID is correct.
+- 官方请求已被 `deepFreeze()`，`llm/stream` 监听器无法修改原对象，`next()` 也不接受替换后的请求；
+- `llm/stream` 事件没有暴露待审工具所属的 Agent，按进程级「最近会话」推断会在并发会话中串号；
+- 唯一正确的身份是被审 Agent 自己的 `agent.session.id`；随机 ID、父 ID、从提示词提取的 ID 或进程级缓存 ID 都不正确。
 
-Runtime source replacement, service monkey-patching and global HTTP interception were
-rejected for the same reasons: they guess at identity or rewrite shared machinery instead
-of setting the field where it is known. This package therefore derives the official
-implementation and adds the missing field directly.
+因此本包没有采用运行时源码替换、服务方法 monkey patch 或全局 HTTP 拦截——它们要么在猜测身份，要么在改写共享机制，而不是在已知身份的位置直接写入该字段。本包改为派生官方实现，直接补上缺失字段。
 
-## What this package changes
+## 本包的改动
 
-| Aspect | Official `0.2.1-rc.2` | This package |
+| 方面 | 官方 `0.2.1-rc.2` | 本包 |
 | --- | --- | --- |
-| Package | `@deepseek-ai/dsh-experimental-auto-review` | `dsh-opencode-auto-review` |
-| Composition row | inserts `auto-review` | disables `auto-review`, inserts `auto-review-opencode` |
-| Reviewer request | no `sessionId` | `sessionId: agent.session.id` in the frozen options |
-| Source metadata | official provenance and `@module` | derived provenance and `@module dsh-opencode-auto-review` |
-| Everything else | — | byte-identical to the fixed upstream commit |
+| 包名 | `@deepseek-ai/dsh-experimental-auto-review` | `dsh-opencode-auto-review` |
+| 组合行 | 插入 `auto-review` | 停用 `auto-review`，插入 `auto-review-opencode` |
+| reviewer 请求 | 无 `sessionId` | 冻结选项中含 `sessionId: agent.session.id` |
+| 源码元数据 | 官方来源与 `@module` | 派生来源与 `@module dsh-opencode-auto-review` |
+| 其余部分 | — | 与固定上游提交逐字节一致 |
 
-`src/index.ts` differs from `packages/experimental/auto-review/src/index.ts` of
-`dsh-v0.2.1-rc.2` (commit `687f282e8625c6b8d11ff58211a90524be2e4317`) in exactly three
-places: a provenance header comment, the `@module` line, and the single added
-`sessionId` line. The parity diff is recorded in [VERIFICATION.md](VERIFICATION.md).
+`src/index.ts` 与 `dsh-v0.2.1-rc.2`（提交 `687f282e8625c6b8d11ff58211a90524be2e4317`）的 `packages/experimental/auto-review/src/index.ts` 恰好有三处差异：新增来源说明头注释、修改 `@module` 行、新增唯一一行 `sessionId`。一致性 diff 记录在 [VERIFICATION.md](VERIFICATION.md)。
 
-The Cordis diagnostic plugin name is left as upstream's `experimental-auto-review` to
-keep the derivation minimal; the composition row ID (`auto-review-opencode`) and the
-package name (`dsh-opencode-auto-review`) are what distinguish this layer in
-configuration.
+为保持最小派生，Cordis 诊断插件名沿用上游的 `experimental-auto-review`；配置中通过组合行 ID（`auto-review-opencode`）和包名（`dsh-opencode-auto-review`）区分本层。
 
-The bundle patch replaces the official row with two distinct row IDs:
+发布包通过两个不同行 ID 的组合 patch 接替官方行：
 
 ```yaml
 - id: auto-review
@@ -150,296 +105,181 @@ The bundle patch replaces the official row with two distinct row IDs:
       name: dsh-opencode-auto-review
 ```
 
-Two distinct row IDs are required. Setting a new `name` on the existing `auto-review`
-row cannot replace the official plugin (the patch `name` field validates the row's
-existing plugin name), and inserting another row with the same ID does not override the
-existing one.
+必须使用两个不同的行 ID。对既有 `auto-review` 行设置新 `name` 不能替换官方插件（patch 的 `name` 字段只校验行内既有插件名），再次插入同 ID 行也不会覆盖既有行。
 
-## What this package preserves
+## 本包保留的行为
 
-Review behavior is the official `0.2.1-rc.2` implementation unchanged:
+审查行为就是官方 `0.2.1-rc.2` 实现，未作改动：
 
-- the fixed `REVIEW_POLICY` text and the five-section review input: policy, cwd-only
-  environment, sourced project instructions, filtered sourced history, and the complete
-  pending action;
-- the low / medium / high risk rules, the exact session-created-object cleanup
-  exception, authorization rules, and fail-closed handling of ambiguous effects or
-  unresolved authorization conflicts;
-- the strict JSON risk/decision protocol: one text object, duplicate-member detection,
-  allowed risk/decision combinations, optional deny reason, and rejection of malformed,
-  truncated or over-long responses;
-- the prepended `tools/pre-execute` listener and its approval precedence: under the
-  `never` approval policy a reviewer denial is final; under `ask` a denial is raised to
-  the user only when every later listener allows the call, so a later denial, cancel or
-  ask wins;
-- native and PTC inner reviews, each started inner call reviewed once, with the outer
-  `run_code` transport excluded;
-- technical failures fail closed with a specific error
-  (`Auto review of tool "<name>" failed; its body was not executed: <error>`) and never
-  execute the tool body;
-- cancellation and disposal: the execution signal is combined with the lifecycle
-  signal; unload stops accepting new reviews, migrates live Auto sessions to
-  `danger-full-access`, then aborts and drains in-flight reviews before the listener and
-  preset contribution are withdrawn;
-- the same required injections (`approval`, `llm`, `permissionPresets`, `sessions`,
-  `tools`, `workingDirectory`), the same single `ctx.effect` registration, and the same
-  failure if a second Auto provider registers;
-- no new configuration options, no new session events, no UI, and no change to the
-  model-visible prompt.
+- 固定的 `REVIEW_POLICY` 文本，以及五段审查输入：策略、仅 cwd 的环境、带来源的项目约束、过滤后带来源的历史、完整待审动作；
+- low / medium / high 风险规则、仅限本 Session 创建对象的精确清理例外、授权规则，以及效果不明确或授权冲突未解决时失败即拒绝的处理；
+- 严格 JSON 风险/决策协议：单个 JSON 文本对象、重复成员检测、合法的 risk/decision 组合、可选 deny 理由，以及拒绝格式错误、截断或超长响应；
+- 置前的 `tools/pre-execute` 监听器及其审批优先级：`never` 审批策略下 reviewer 拒绝为最终结果；`ask` 下只有在后续所有监听器均放行时才升级为用户审批，因此后续的拒绝、取消或 ask 优先；
+- native 与 PTC inner 审查，每个已开始的 inner 调用审查一次，外层 `run_code` transport 排除在外；
+- 技术失败关闭闸门，返回具体错误（`Auto review of tool "<name>" failed; its body was not executed: <error>`），且从不执行工具正文；
+- 取消与卸载：执行信号与生命周期信号组合；卸载时先停止接收新审查，将存活的 Auto 会话迁移到 `danger-full-access`，再中止并等待在途审查结清，最后撤回监听器与 preset contribution；
+- 相同的必需注入（`approval`、`llm`、`permissionPresets`、`sessions`、`tools`、`workingDirectory`）、同一个 `ctx.effect` 注册，以及第二个 Auto 提供方注册时同样失败；
+- 不新增配置项、不新增会话事件、无 UI，也不改变模型可见的提示词。
 
-See the official Auto review README shipped with
-`@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` (in the DSH repository under
-`packages/experimental/auto-review/README.md`) for the full behavior description; that
-text applies verbatim to this package.
+完整行为描述见官方 Auto review README（随 `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2` 发布，位于 DSH 仓库 `packages/experimental/auto-review/README.md`），该描述对本包同样适用。
 
-## Version support
+## 版本支持
 
-| Item | Required version |
+| 项目 | 必需版本 |
 | --- | --- |
-| DSH runtime | `0.2.1-rc.2` exactly; enforced by the pinned peers below, not by `engines.dsh` |
-| Declared compatibility | `engines.dsh: "0.2.1-rc.2"` — author-declared SemVer metadata; current DSH installers and loaders do not enforce it |
-| Adapter | `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2` |
-| pi-ai | `@earendil-works/pi-ai@1.1.0` (with the DSH repository patch) |
+| DSH 运行时 | `0.2.1-rc.1` 或 `0.2.1-rc.2`——两个版本提供同一套宿主 API |
+| 兼容性声明 | `engines.dsh: "0.2.1-rc.1 \|\| 0.2.1-rc.2"`——0.2.1 线上真正生效的闸门，此时由它单独决定，不参考 peers |
+| 适配器 | `@deepseek-ai/dsh-llm-pi-ai`，版本与宿主相同（`0.2.1-rc.1` 或 `0.2.1-rc.2`） |
+| pi-ai | `@earendil-works/pi-ai@1.1.0`（含 DSH 仓库补丁） |
 | Cordis | `@deepseek-ai/cordis@4.0.5` |
-| Node.js | `>=22.19.0` (`engines.node`) |
+| Node.js | `>=22.19.0`（`engines.node`） |
 
-Version support is written down in two independent places, and only one of them is
-enforced:
+兼容性声明在两处，且两处携带同一窗口：
 
-- `engines.dsh: "0.2.1-rc.2"` is author-declared metadata. DSH defines the field as a
-  SemVer range of compatible hosts, but its current installers and loaders do not enforce
-  `engines.dsh` or validate its syntax; a mismatch there does not reject a host.
-- The `peerDependencies` are the effective gate. The `@deepseek-ai/dsh-*` service packages
-  that must share the host's instances are pinned to `0.2.1-rc.2` (Cordis is a peer pinned
-  to `4.0.5`). Before a profile imports a plugin, DSH compares every declared
-  `@deepseek-ai/dsh`/`@deepseek-ai/dsh-*` peer range with the single runtime version it
-  reports (`getDshRuntimeVersion()`); every range must match and prereleases participate
-  in range matching, so these exact prerelease pins accept only DSH `0.2.1-rc.2`. On a
-  mismatch the profile disables the row with an incompatibility diagnostic instead of
-  loading it (an operator can still grant an explicit exact-version exemption).
+- `engines.dsh` 是 0.2.1 线上生效的闸门。manifest 声明该字段时，DSH 会在加载 profile 前用运行时版本与该范围比对，并仅据此裁决；不匹配时以指出 `engines.dsh` 的不兼容诊断拒绝。这不是推测：`0.1.0` 声明精确 `0.2.1-rc.2`，被真实的 `0.2.1-rc.1` CLI 以 `requirements {"engines.dsh":"0.2.1-rc.2"}` 拒绝，本次修改因此放宽了该范围。
+- `peerDependencies` 是忽略 `engines.dsh` 的宿主版本线（0.2.0 线只校验 peer）上的闸门，也是包管理器解析共享 Cordis 与服务实例的依据。它们携带同一 `0.2.1-rc.1 || 0.2.1-rc.2` 范围；Cordis 仍固定 `4.0.5`。
 
-The only regular runtime dependency is `@deepseek-ai/dsh-util-values@0.2.1-rc.2`. The
-remaining `@deepseek-ai/*` packages appear only in `devDependencies` for typechecking,
-tests and the build. The build marks `@deepseek-ai/*` as external, so the host's Cordis and
-service instances are shared, not duplicated.
+窗口为何恰好是这两个版本：`0.2.1-rc.1` 与 `0.2.1-rc.2` 仅在 `@deepseek-ai/*` 各包的版本文本上不同，插件代码、`GenerateOptions` 契约与注入服务完全一致（API 差异对照见 [VERIFICATION.md](VERIFICATION.md)）。更早的 `0.2.0-rc.x` 线是另一套宿主 API：它没有本包注入的 `workingDirectory` 服务，Cordis 会让插件行保持 pending 而非激活；其 pi-ai 线也完全不发 `x-opencode-session`，本包要修的缺陷在该线上无法在不改适配器的情况下修复。两者都在本版支持声明之外。
 
-There is intentionally no broad compatibility range for the first release — neither in
-`engines.dsh` nor in the peer pins. The fix depends on both the exact
-`GenerateOptions`/adapter behavior and the exact reviewer implementation of the target
-release. Widening the claim means widening the peer ranges and re-running the parity and
-transport checks; editing `engines.dsh` alone cannot widen it, because DSH does not enforce
-that field. When upstream ships an official fix that carries the reviewer session
-identity, upgrade and re-verify before removing this package (see
-[UPSTREAM.md](UPSTREAM.md)).
+唯一常规运行时依赖是 `@deepseek-ai/dsh-util-values`，用同一范围声明，使 profile 解析到宿主对应版本。其余 `@deepseek-ai/*` 包只出现在 `devDependencies` 中，供针对 `0.2.1-rc.2` 的类型检查、测试与构建使用（两个版本在此可互换）。构建把 `@deepseek-ai/*` 标记为 external，共享宿主的 Cordis 与服务实例，不会打入私有副本。
 
-The four OpenCode `opencode` chat APIs covered by dynamic transport acceptance are recorded
-as PASS in [VERIFICATION.md](VERIFICATION.md) (D2/D4); the `opencode-go` routes are excluded
-from the first-release support claim because there is no real-gateway acceptance for them.
+上游若发布携带 reviewer 会话身份的正式修复，届时先升级并重新验证，再移除本包（见 [UPSTREAM.md](UPSTREAM.md)）。
 
-## Installation
+动态传输验收覆盖的四个 OpenCode `opencode` 聊天 API 已在 [VERIFICATION.md](VERIFICATION.md) 中记录为 PASS（D2/D4）；`opencode-go` 路由因没有真实网关验收而排除在首版支持声明之外。
 
-Prerequisites:
+## 安装
 
-- use the DSH CLI from the **same** DSH `0.2.1-rc.2` installation and the **same**
-  `DSH_HOME` as the Desktop or Web UI you want to change; installing into another
-  `DSH_HOME` or profile does not affect the running window;
-- confirm the CLI version matches the target release (`dsh --version` should report
-  `0.2.1-rc.2`); a different runtime gets the row disabled by the pinned-peer check at
-  profile load with an incompatibility diagnostic, and `engines.dsh` does not enforce a
-  mismatch;
-- the official Auto review bundle layer for `0.2.1-rc.2` must be enabled and appear
-  **before** this package's bundle layer in the profile's ordered bundle list. The
-  shipped DSH installation contains the layer but leaves it switched off; adding it to
-  the profile enables it.
+前置条件：
 
-Step 1 — make sure the official layer is present. Skip this step if the profile's
-effective composition already contains the official `auto-review` row (for example
-because it was enabled from the Web sidebar's Plugins page):
+- 使用与要修改的 Desktop 或 Web UI **相同**的 DSH `0.2.1-rc.1` 或 `0.2.1-rc.2` 安装所提供的 CLI，并指向**同一个** `DSH_HOME`；安装到其他 `DSH_HOME` 或 profile 不会改变当前窗口；
+- 确认 CLI 版本是目标版本（`dsh --version` 应报告 `0.2.1-rc.1` 或 `0.2.1-rc.2`）；其他运行版本会在 profile 加载阶段被停用并给出不兼容诊断——0.2.1 线上由 `engines.dsh` 拦截，0.2.0 线上由锁定的 peer 拦截；
+- 与所运行版本匹配的官方 Auto review 组合层必须已启用，并且在 profile 的有序 bundle 列表中位于本包组合层**之前**。DSH 安装随附该层但默认关闭，将其加入 profile 即启用。
+
+步骤 1 —— 确认官方层存在。请使用与宿主相同的版本；如果 profile 的最终组合中已包含官方 `auto-review` 行（例如已在 Web 侧栏插件页开启），跳过此步：
 
 ```sh
+# 在 DSH 0.2.1-rc.1 宿主上：
+dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.1
+
+# 在 DSH 0.2.1-rc.2 宿主上：
 dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2
 ```
 
-Step 2 — add this package. The standard path is the npm registry package; the prebuilt
-tarball is the same artifact for offline or air-gapped profiles (no build step, no
-developer source path in either case):
+步骤 2 —— 安装本包。标准路径是 npm registry 包；预构建 tarball 是同一产物，供离线或内网 profile 使用（两者都无需构建，也不依赖开发者源码路径）：
 
 ```sh
-# From the npm registry (recommended; the package is published at 0.1.0)
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.0
+# 从 npm registry 安装（0.1.0 已发布，面向 0.2.1-rc.2；0.1.1 新增 0.2.1-rc.1）
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
 
-# Or from the release tarball, when the registry is not reachable
-dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.0.tgz
+# 或从发布 tarball 安装（registry 不可达时使用）
+dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
 ```
 
-The registry package and the tarball are the same published artifact (27,545 B, SHA-256
-`63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`). If you only need the
-package as a dependency in another project, `npm install dsh-opencode-auto-review@0.1.0`
-installs that same prebuilt package. Do not substitute a git checkout: `lib/` is gitignored
-and the package has no `prepare`/`install` build hook, so a source install has no built
-entry point.
+registry 包与 tarball 是同一个预构建产物（0.1.0 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`；0.1.1 的大小与 SHA-256 见 [VERIFICATION.md](VERIFICATION.md)）。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.1` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
 
-Step 3 — inspect the effective composition, not just the bundle list:
+步骤 3 —— 检查生效组合，而不只是 bundle 列表：
 
 ```sh
 dsh --profile <profile> --dump-config
 ```
 
-Step 4 — apply the configuration to the running UI. Installing or removing a bundle layer
-does not change a live session's selected permission preset: stop the current turn, keep
-the session in an appropriate non-Auto mode while loading and verifying the composition,
-then explicitly select Auto review again. For acceptance testing, use a separate test
-profile.
+步骤 4 —— 让配置作用于运行中的 UI：安装或移除组合层不会改变存活会话已选的权限预设；停止当前轮次，在加载与确认组合期间保持会话处于合适的非 Auto 模式，确认组合后显式重新选择 Auto review。验收测试请使用独立测试 profile。
 
-If the official layer is missing, the disable entry in this package's patch only warns
-and is skipped; the profile may still load, but it is not the standard, accepted
-installation described above.
+如果官方层缺失，本包 patch 中的停用条目只会告警并跳过；profile 可能仍能加载，但不属于上述标准验收安装。
 
-## What a correct final composition looks like
+## 正确的最终组合
 
-`dsh --profile <profile> --dump-config` must show, in semantic terms (formatting depends
-on the CLI version):
+`dsh --profile <profile> --dump-config` 在语义上必须显示（具体格式随 CLI 版本而定）：
 
-| Row | Plugin | Required state |
+| 行 | 插件 | 必需状态 |
 | --- | --- | --- |
-| `auto-review` | `@deepseek-ai/dsh-experimental-auto-review` | present with `disabled: true` |
-| `auto-review-opencode` | `dsh-opencode-auto-review` | present and active (no `disabled`) |
-| any other row | either plugin | must not be active |
+| `auto-review` | `@deepseek-ai/dsh-experimental-auto-review` | 存在，且 `disabled: true` |
+| `auto-review-opencode` | `dsh-opencode-auto-review` | 存在且有效（无 `disabled`） |
+| 其他任何行 | 上述任一插件 | 不得有效 |
 
-In other words:
+也就是说：
 
-- the official row stays installed but disabled;
-- exactly one active `auto-review-opencode` row points at `dsh-opencode-auto-review`;
-- no other active row mounts the official implementation or this package, and therefore
-  only one Auto preset provider and one review listener exist.
+- 官方行保留安装但被停用；
+- 恰好有一个有效的 `auto-review-opencode` 行指向 `dsh-opencode-auto-review`；
+- 不得有其他有效行挂载官方实现或本包，从而只有一个 Auto preset 提供方和一套审查监听器。
 
-Configuration layers apply in order: the profile's ordered bundle list, the profile's own
-patch, the home patch, and the command-line overlay. A later layer can re-enable the
-official row or disable this package, so the final composition must always be checked;
-the bundle list alone is not sufficient. If both implementations load, duplicate Auto
-registration fails explicitly (`registerAuto()` throws) instead of being silently
-swallowed.
+配置层按顺序生效：profile 的有序 bundle 列表、profile 自身 patch、home patch、命令行 overlay。后面的层可能重新启用官方行或停用本包，因此必须检查最终组合；只看 bundle 列表不够。若两套实现同时加载，重复 Auto 注册会明确失败（`registerAuto()` 抛错），不会被静默吞掉。
 
-## Session identity semantics
+## 会话身份语义
 
-The reviewer request carries the session ID of the Agent that owns the pending tool call.
-It is stamped at request construction, so every reviewer route gets the same correct
-identity without provider-specific branching.
+reviewer 请求携带待审工具所属 Agent 的会话 ID，在构造请求时写入，因此所有 reviewer 路由都得到同一正确身份，无需按 provider 名分支。
 
-| Call source | Reviewer session identity |
+| 调用来源 | reviewer 会话身份 |
 | --- | --- |
-| Main agent native tool call | the main agent's `agent.session.id` |
-| Another concurrent main session | that session's own ID (no cross-session leakage) |
-| In-process subagent tool call | the subagent's own `agent.session.id`, never the parent's ID |
-| Parent agent initiating out-of-process delegation | the parent's ID for the delegation call; the external child keeps its own permission system and does not use the parent's Auto reviewer |
+| 主代理 native 工具调用 | 主代理的 `agent.session.id` |
+| 并发的另一主会话 | 该会话自己的 ID（不会串会话） |
+| 进程内子代理工具调用 | 子代理自己的 `agent.session.id`，绝不使用父代理 ID |
+| 父代理发起进程外委派 | 委派调用使用父代理 ID；外部子进程保留自身权限系统，不使用父代理的 Auto reviewer |
 
-No random ID is generated, no parent ID substitutes for a child ID, no ID is extracted
-from the prompt, and no process-level session identity is cached. The identity is
-model-invisible transport metadata; the reviewer prompt content is unchanged.
+不生成随机 ID，不用父会话 ID 替代子会话 ID，不从提示词提取 ID，也不缓存进程级会话身份。该身份是对模型不可见的传输元数据，reviewer 提示词内容不变。
 
-## Static `x-opencode-session` header caveat
+## 静态 x-opencode-session 请求头注意事项
 
-pi-ai `1.1.0` only adds `x-opencode-session` when no header with the same name already
-exists, comparing header names case-insensitively. Any explicitly configured
-`x-opencode-session` header — including `X-OpenCode-Session` or another differently cased
-spelling — therefore wins over the dynamically generated per-session value and is sent
-unchanged.
+pi-ai `1.1.0` 只在不存在同名请求头（名称比较不区分大小写）时才添加 `x-opencode-session`。因此任何显式配置的 `x-opencode-session` 头——包括 `X-OpenCode-Session` 或其他大小写写法——都会优先于动态生成的每会话值，并被原样发送。
 
-If a static header was configured as an emergency workaround for this bug, it will pin
-every review to one conversation ID and defeat the per-session identity fix. Before
-dynamic acceptance:
+如果曾用静态请求头作为本缺陷的应急规避，它会把所有审查固定到同一个会话 ID，使按会话修复失效。动态验收前请：
 
-1. inspect the provider configuration for a same-named header in any letter case;
-2. remove it (this package never edits provider configuration on your behalf);
-3. re-run the acceptance with two concurrent sessions and confirm each review request
-   reaches the gateway with its own session ID.
+1. 检查 provider 配置中是否存在任意大小写的同名请求头；
+2. 移除它（本包不会代你修改 provider 配置）；
+3. 用两个并发会话重跑验收，确认每个审查请求都以自己的会话 ID 到达网关。
 
-The upstream priority rule (explicit header wins) is unchanged and is verified at transport
-level by item D5 in [VERIFICATION.md](VERIFICATION.md); the remaining confirmation is the
-real OpenCode gateway acceptance (E2), which is not completed.
+上游「显式请求头优先」的规则未被改变，并已由 [VERIFICATION.md](VERIFICATION.md) 中的 D5 项在传输层验证；剩余确认为真实 OpenCode 网关验收（E2），尚未完成。
 
-## Uninstall and rollback
+## 卸载与回退
 
-Remove this package's layer:
+移除本包层：
 
 ```sh
 dsh plugin --profile <profile> remove dsh-opencode-auto-review
 dsh --profile <profile> --dump-config
 ```
 
-What happens, and what does not:
+会发生与不会发生的事：
 
-- the bundle layer is removed and configuration recomputation restores the official
-  `auto-review` row's previous setting (this package only disabled it);
-- unloading runs the official disposal behavior preserved by this package: selection and
-  review admission close first, every session currently on the Auto preset is migrated to
-  `danger-full-access` with the `never` approval policy written through the Session
-  writer, then in-flight reviews are aborted and awaited before the listener and preset
-  contribution are withdrawn. The sandbox value and persistent terminals survive the
-  migration. The model sees the new policy in the next runtime-context snapshot; no
-  policy-change notice is queued;
-- live sessions are **not** switched back to Auto automatically, and reinstalling the
-  layer restores the option but does not move live sessions back either. Selecting Auto
-  again after a reinstall is an explicit user action;
-- removing this package restores the official implementation, so the original OpenCode
-  defect returns: OpenCode-routed reviewer requests carry no `sessionId`, the gateway
-  rejects them with `MissingSessionID`, and the review gate fails closed. Rollback is a
-  return to baseline, not a working OpenCode review path.
+- 移除组合层后，配置重算会恢复官方 `auto-review` 行此前的设置（本包只是停用了它）；
+- 卸载会执行本包保留的官方清理行为：先关闭选择与 review admission，将所有仍处于 Auto 预设的会话迁移到 `danger-full-access`，并通过 Session writer 写入 `never` 审批策略；随后中止并等待在途审查结清，再撤回监听器与 preset contribution。沙箱值与持久终端在迁移中保持不变。模型在下一次 runtime-context 快照中看到新策略；不会排入策略变更通知；
+- 存活会话**不会**自动切回 Auto；重装本层只恢复该选项，也不会把存活会话切回。重装后重新选择 Auto 是用户的显式操作；
+- 移除本包会恢复官方实现，因此 OpenCode 的原始缺陷随之恢复：OpenCode 路由的 reviewer 请求不带 `sessionId`，网关以 `MissingSessionID` 拒绝，审查闸门关闭。回退只是回到基线，不代表 OpenCode 审查继续可用。
 
-If the official layer was added only for this package and Auto review is no longer
-wanted, remove it as well:
+如果官方层只是为本包而添加、且不再需要 Auto review，可一并移除：
 
 ```sh
 dsh plugin --profile <profile> remove @deepseek-ai/dsh-experimental-auto-review
 ```
 
-Permission-mode migration is never silent or seamless: confirm the current session's
-permission mode and approval policy after install, hot-swap, uninstall or rollback.
+权限模式迁移从来不是静默或无缝的：在安装、热替换、卸载或回退之后，都要确认当前会话的权限模式与审批策略。
 
-## Verification status
+## 验证状态
 
-The evidence record is [VERIFICATION.md](VERIFICATION.md), in the repository checkout
-alongside this README (files listed in the published manifest are the tarball contents;
-the repository additionally contains the design spec, tests and verification record).
-That record lists each acceptance check with the command or artifact that evidences it,
-and marks checks without captured evidence as `NOT COMPLETED`. This README claims no
-check that the record does not evidence; anything not marked `PASS` there should be
-treated as unverified.
+证据记录见 [VERIFICATION.md](VERIFICATION.md)，它与本 README 一起位于仓库检出中（发布清单列出的文件才是 tarball 内容；仓库还会包含设计文档、测试与验证记录）。该记录逐项列出验收检查、对应命令或产物证据，并把没有捕获证据的检查标记为 `NOT COMPLETED`。本 README 不声称任何该记录未证明通过的检查；记录中未标为 `PASS` 的项目都应视为未验证。
 
-## Known limitations and deferred work
+## 已知限制与延期工作
 
-This release deliberately does not add:
+本版有意不增加：
 
-- a model adapter or a separate reviewer model — the reviewer uses the current agent's
-  provider and model and the shipped adapter's defaults;
-- a retry, backoff or fallback layer — one extra reviewer request per supported call,
-  and an oversized or failing request fails the call closed;
-- configurable policy, deterministic tool exemptions or persistent grants;
-- a UI panel, new permission modes, or new session events;
-- prompt-visible session identity — `sessionId` is transport metadata only, so the
-  reviewer cannot reason about which session it is reviewing;
-- a file sandbox: the outer `run_code` transport and direct Node effects inside a PTC
-  program do not pass through inner-tool review;
-- any change to provider configuration, including the static header workaround removal
-  described above;
-- support for any DSH release other than `0.2.1-rc.2`.
+- 模型适配器或独立 reviewer 模型——reviewer 使用当前 agent 的 provider 与模型以及随附适配器默认值；
+- 重试、退避或回退层——每个受支持调用一次额外 reviewer 请求，超长或失败的请求使调用失败即拒绝；
+- 可配置策略、确定性工具豁免或持久授权；
+- UI 面板、新权限模式或新会话事件；
+- 提示词可见的会话身份——`sessionId` 只是传输元数据，reviewer 无法据此判断自己在审查哪个会话；
+- 文件沙箱：外层 `run_code` transport 与 PTC 程序内直接 Node 效果不经过 inner-tool review；
+- 对 provider 配置的任何修改，包括上文所述移除静态请求头的操作；
+- 对已验证窗口（`0.2.1-rc.1` / `0.2.1-rc.2`）之外任何 DSH 版本的支持；尤其是 `0.2.0-rc.x` 线，它缺少本包注入的 `workingDirectory` 服务与 pi-ai 的 `x-opencode-session` 传输链路。
 
-Inherited official limitations still apply: model classification can be wrong (Auto may
-allow unsafe actions, deny useful work, and spend additional tokens); out-of-process
-subagents retain their own permission systems after the parent delegation call is
-allowed; the reviewer reads session action history through the deprecated synchronous
-`snapshotEvents()` reader. This package also only addresses the `MissingSessionID`
-failure caused by the missing reviewer `sessionId`; other gateway or provider rejections
-are out of scope.
+官方固有限制同样适用：模型分类可能出错（Auto 可能放行不安全动作、拒绝有用工作并消耗额外 token）；进程外子代理在父委派调用获准后保留自身权限系统；reviewer 通过已废弃的同步 `snapshotEvents()` 读取会话动作历史。本包只处理 reviewer 缺少 `sessionId` 导致的 `MissingSessionID`；其他网关或 provider 拒绝不在范围内。
 
-## Provenance and license
+## 来源与许可证
 
-This package is released under the [MIT License](LICENSE), Copyright (c) 2026 Dr.Scorpio.
+本包以 [MIT 许可证](LICENSE)发布，Copyright (c) 2026 Dr.Scorpio。
 
-It is derived from `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2`,
-deepseek-ai/deepseek-harness commit `687f282e8625c6b8d11ff58211a90524be2e4317`, MIT,
-Copyright (c) 2026 DeepSeek. The third-party notice for the derived portions is included
-in [LICENSE](LICENSE) below the MIT text. The exact upstream paths, file hashes, derivation
-changes and re-derivation commands are in [UPSTREAM.md](UPSTREAM.md).
+派生自 `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2`，deepseek-ai/deepseek-harness 提交
+`687f282e8625c6b8d11ff58211a90524be2e4317`，MIT，Copyright (c) 2026 DeepSeek。派生内容的第三方声明
+位于 [LICENSE](LICENSE) 中 MIT 文本之后。确切的上游路径、文件哈希、派生变更和重新派生命令见
+[UPSTREAM.md](UPSTREAM.md)。
 
 [![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
