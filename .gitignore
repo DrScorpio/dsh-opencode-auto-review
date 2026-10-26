@@ -12,3 +12,7 @@ lib/
 .npm-cache/
 .pnpm-store/
 .pnpm-cache/
+
+# Local-only one-off extraction/verification scratch area (rc.3 app.asar
+# extracts, isolated rc.3 CLI prefix, ACL-recovery reports, pack scratch).
+scratch/

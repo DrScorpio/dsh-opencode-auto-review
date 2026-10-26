@@ -2,7 +2,7 @@
  * Real-transport integration tests for the OpenCode session-identity fix.
  *
  * These tests do not mock the adapter: a real DSH `LlmRuntime` is wired to the
- * published `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2` adapter, which drives the
+ * published `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.3` adapter, which drives the
  * real `@earendil-works/pi-ai@1.1.0` OpenCode provider over loopback HTTP. The
  * local server (tests/fixtures/transport/mock-opencode-server.ts) emulates the
  * OpenCode gateway session check and records what actually reached the wire.
@@ -429,7 +429,7 @@ describe('upstream official implementation vs this fix over the same fixture', (
   it('official fails closed with MissingSessionID; the fix delivers the header and executes once', async () => {
     const gateway = await startMockGateway([{ events: eventsForApi('openai-completions', ALLOW_LOW_DECISION) }])
 
-    // 1. The official 0.2.1-rc.2 package built the same frozen request without
+    // 1. The official 0.2.1-rc.3 package built the same frozen request without
     //    sessionId, so pi-ai emits no session header and the gateway rejects.
     const official = await harness({
       baseURL: gateway.url,

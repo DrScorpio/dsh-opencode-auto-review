@@ -14,7 +14,7 @@
  *    provider, and it is this package;
  * 4. the published manifest points the host at the prebuilt `lib/` output,
  *    whitelists only publishable files, and declares the supported DSH version
- *    window (`0.2.1-rc.1` through `0.2.1-rc.2`).
+ *    window (`0.2.1-rc.1` through `0.2.1-rc.3`).
  *
  * No YAML parser is a declared dependency of this project, so the small patch
  * file is parsed by the narrow block-YAML subset parser below (block maps,
@@ -35,12 +35,16 @@ const OFFICIAL_ROW_ID = 'auto-review'
 const REPLACEMENT_PLUGIN = 'dsh-opencode-auto-review'
 const REPLACEMENT_ROW_ID = 'auto-review-opencode'
 
-// The host window this release is verified against. `0.2.1-rc.1` and
-// `0.2.1-rc.2` are the same host API: their `@deepseek-ai/*` package bytes are
-// identical apart from the version string, so one code path serves both. The
-// older `0.2.0-rc.x` line is excluded: it predates the `workingDirectory`
-// service this plugin injects and the pi-ai `sessionId` transport plumbing.
-const SUPPORTED_DSH_RANGE = '0.2.1-rc.1 || 0.2.1-rc.2'
+// The host window this release is verified against. `0.2.1-rc.1`,
+// `0.2.1-rc.2` and `0.2.1-rc.3` are the same host API: their `@deepseek-ai/*`
+// package bytes are identical apart from the version string, so one code path
+// serves all three. (The rc.3 desktop/runtime packages were re-extracted from
+// the shipped app.asar and diffed against the rc.2 npm packages: every compiled
+// `lib/index.js` and `lib/types/*.js` file this plugin imports is byte-identical;
+// only `package.json` version text differs.) The older `0.2.0-rc.x` line is
+// excluded: it predates the `workingDirectory` service this plugin injects and
+// the pi-ai `sessionId` transport plumbing.
+const SUPPORTED_DSH_RANGE = '0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3'
 
 // ---------------------------------------------------------------------------
 // Narrow block-YAML subset parser (no dependency).
@@ -364,7 +368,7 @@ describe('package.json — published bundle manifest', () => {
 
   it('is the standalone ESM package this project publishes', () => {
     expect(manifest.name).toBe(REPLACEMENT_PLUGIN)
-    expect(manifest.version).toBe('0.1.1')
+    expect(manifest.version).toBe('0.1.2')
     expect(manifest.type).toBe('module')
   })
 

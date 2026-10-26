@@ -4,14 +4,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/dsh-opencode-auto-review.svg)](https://www.npmjs.com/package/dsh-opencode-auto-review)
-[![DSH 0.2.1-rc.1 | 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.1%20%7C%200.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH 0.2.1-rc.1 | 0.2.1-rc.2 | 0.2.1-rc.3](https://img.shields.io/badge/DSH-0.2.1--rc.1%20%7C%200.2.1--rc.2%20%7C%200.2.1--rc.3-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![Node.js >=22.19.0](https://img.shields.io/badge/Node.js-%3E%3D22.19.0-brightgreen.svg)](https://nodejs.org)
 
-让 DSH Auto review 在 DSH `0.2.1-rc.1` 与 `0.2.1-rc.2` 上通过 OpenCode 网关正常工作。
+让 DSH Auto review 在 DSH `0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3` 上通过 OpenCode 网关正常工作。
 
-`dsh-opencode-auto-review@0.1.1` 是官方 `@deepseek-ai/dsh-experimental-auto-review` 组合包（`0.2.1-rc.1` 与 `0.2.1-rc.2` 为同一份代码）的最小独立派生。它只改变一个行为：冻结的 reviewer 请求现在携带 `sessionId: agent.session.id`，使 pi-ai 的 OpenCode 提供方能够发出必需的 `x-opencode-session` 请求头。其余全部——审查策略、五段输入、风险规则、JSON 协议、审批优先级、PTC 处理、取消与卸载——都保持官方实现不变。
+`dsh-opencode-auto-review@0.1.2` 是官方 `@deepseek-ai/dsh-experimental-auto-review` 组合包（`0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3` 为同一份代码）的最小独立派生。它只改变一个行为：冻结的 reviewer 请求现在携带 `sessionId: agent.session.id`，使 pi-ai 的 OpenCode 提供方能够发出必需的 `x-opencode-session` 请求头。其余全部——审查策略、五段输入、风险规则、JSON 协议、审批优先级、PTC 处理、取消与卸载——都保持官方实现不变。
 
-> **版本支持。** 本版支持 DSH `0.2.1-rc.1` 与 `0.2.1-rc.2`，配套同版本的 `@deepseek-ai/dsh-llm-pi-ai` 适配器与 pi-ai `@earendil-works/pi-ai@1.1.0`。这两个宿主版本是同一份代码：`@deepseek-ai/*` 各包除 `version` 字段外逐字节相同，因此插件无需修改即可在两者上运行。`engines.dsh: "0.2.1-rc.1 || 0.2.1-rc.2"` 是 0.2.1 线上真正生效的闸门——DSH 在加载 profile 前用运行时版本与该范围比对，不匹配时以不兼容诊断拒绝安装/加载（已在真实的 `0.2.1-rc.1` CLI 上验证）。`peerDependencies` 携带同一范围，因为仍按 peer 校验的旧宿主版本线与包管理器都以它为准。`0.2.0-rc.x` 线不受支持：它缺少本包注入的 `workingDirectory` 服务，也缺少 pi-ai 的 `sessionId` 传输链路，因此即使强行安装插件也会保持未激活。要继续扩大声明，必须重跑 [UPSTREAM.md](UPSTREAM.md) 与 [VERIFICATION.md](VERIFICATION.md) 记录的一致性对照与传输验证。
+> **版本支持。** 本版支持 DSH `0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3`，配套同版本的 `@deepseek-ai/dsh-llm-pi-ai` 适配器与 pi-ai `@earendil-works/pi-ai@1.1.0`。这三个宿主版本是同一份代码：`@deepseek-ai/*` 各包除 `version` 字段外逐字节相同，因此插件无需修改即可在三者上运行（rc.1↔rc.2 与 rc.2↔rc.3 的对照记录见 [VERIFICATION.md](VERIFICATION.md)）。`engines.dsh: "0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3"` 是 0.2.1 线上真正生效的闸门——DSH 在加载 profile 前用运行时版本与该范围比对，不匹配时以不兼容诊断拒绝安装/加载（已在真实的 `0.2.1-rc.1` CLI 上验证闸门行为）。`peerDependencies` 携带同一范围，因为仍按 peer 校验的旧宿主版本线与包管理器都以它为准。`0.2.0-rc.x` 线不受支持：它缺少本包注入的 `workingDirectory` 服务，也缺少 pi-ai 的 `sessionId` 传输链路，因此即使强行安装插件也会保持未激活。要继续扩大声明，必须重跑 [UPSTREAM.md](UPSTREAM.md) 与 [VERIFICATION.md](VERIFICATION.md) 记录的一致性对照与传输验证。
 
 ## 目录
 
@@ -31,18 +31,18 @@
 
 ## 快速开始
 
-`dsh-opencode-auto-review` 的最新版本是 `0.1.1`，已发布到 npm（`latest` dist-tag）：[`dsh-opencode-auto-review@0.1.1`](https://www.npmjs.com/package/dsh-opencode-auto-review)，在保留 `0.2.1-rc.2` 的同时新增 `0.2.1-rc.1` 支持；`0.1.0` 是上一版，仅支持 `0.2.1-rc.2`。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
+`dsh-opencode-auto-review` 的当前版本是 `0.1.2`，在保留 `0.2.1-rc.1` 与 `0.2.1-rc.2` 的同时新增 `0.2.1-rc.3` 支持；发布到 npm 后 `latest` dist-tag 指向它（[`dsh-opencode-auto-review@0.1.2`](https://www.npmjs.com/package/dsh-opencode-auto-review)）。`0.1.1` 是上一版，支持 `0.2.1-rc.1` 与 `0.2.1-rc.2`；`0.1.0` 仅支持 `0.2.1-rc.2`。安装与生效组合是经过验证的路径；加载/重选步骤与完整 profile 启动不在该证据范围内（见[验证状态](#验证状态)）。
 
-前置条件：与所运行 DSH 版本（`0.2.1-rc.1` 或 `0.2.1-rc.2`）匹配的官方 `@deepseek-ai/dsh-experimental-auto-review` 组合层必须已在该 profile 中启用，
+前置条件：与所运行 DSH 版本（`0.2.1-rc.1`、`0.2.1-rc.2` 或 `0.2.1-rc.3`）匹配的官方 `@deepseek-ai/dsh-experimental-auto-review` 组合层必须已在该 profile 中启用，
 并且在有序 bundle 列表中位于本包之前（[安装](#安装)步骤 1）。缺少该层时，本包 patch 的停用条目只会告警，
 下面的组合检查也无法通过。
 
 ```sh
 # 1. 安装本包到目标 profile
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.2
 
 #    离线备选：从同一个预构建产物（tarball）安装
-#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
+#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 
 # 2. 检查生效组合
 dsh --profile <profile> --dump-config
@@ -127,9 +127,9 @@ pi-ai `1.1.0` 的 OpenCode 提供方只在 `sessionId` 非空且不存在同名�
 
 | 项目 | 必需版本 |
 | --- | --- |
-| DSH 运行时 | `0.2.1-rc.1` 或 `0.2.1-rc.2`——两个版本提供同一套宿主 API |
-| 兼容性声明 | `engines.dsh: "0.2.1-rc.1 \|\| 0.2.1-rc.2"`——0.2.1 线上真正生效的闸门，此时由它单独决定，不参考 peers |
-| 适配器 | `@deepseek-ai/dsh-llm-pi-ai`，版本与宿主相同（`0.2.1-rc.1` 或 `0.2.1-rc.2`） |
+| DSH 运行时 | `0.2.1-rc.1`、`0.2.1-rc.2` 或 `0.2.1-rc.3`——三个版本提供同一套宿主 API |
+| 兼容性声明 | `engines.dsh: "0.2.1-rc.1 \|\| 0.2.1-rc.2 \|\| 0.2.1-rc.3"`——0.2.1 线上真正生效的闸门，此时由它单独决定，不参考 peers |
+| 适配器 | `@deepseek-ai/dsh-llm-pi-ai`，版本与宿主相同（`0.2.1-rc.1`、`0.2.1-rc.2` 或 `0.2.1-rc.3`） |
 | pi-ai | `@earendil-works/pi-ai@1.1.0`（含 DSH 仓库补丁） |
 | Cordis | `@deepseek-ai/cordis@4.0.5` |
 | Node.js | `>=22.19.0`（`engines.node`） |
@@ -137,11 +137,11 @@ pi-ai `1.1.0` 的 OpenCode 提供方只在 `sessionId` 非空且不存在同名�
 兼容性声明在两处，且两处携带同一窗口：
 
 - `engines.dsh` 是 0.2.1 线上生效的闸门。manifest 声明该字段时，DSH 会在加载 profile 前用运行时版本与该范围比对，并仅据此裁决；不匹配时以指出 `engines.dsh` 的不兼容诊断拒绝。这不是推测：`0.1.0` 声明精确 `0.2.1-rc.2`，被真实的 `0.2.1-rc.1` CLI 以 `requirements {"engines.dsh":"0.2.1-rc.2"}` 拒绝，本次修改因此放宽了该范围。
-- `peerDependencies` 是忽略 `engines.dsh` 的宿主版本线（0.2.0 线只校验 peer）上的闸门，也是包管理器解析共享 Cordis 与服务实例的依据。它们携带同一 `0.2.1-rc.1 || 0.2.1-rc.2` 范围；Cordis 仍固定 `4.0.5`。
+- `peerDependencies` 是忽略 `engines.dsh` 的宿主版本线（0.2.0 线只校验 peer）上的闸门，也是包管理器解析共享 Cordis 与服务实例的依据。它们携带同一 `0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3` 范围；Cordis 仍固定 `4.0.5`。
 
-窗口为何恰好是这两个版本：`0.2.1-rc.1` 与 `0.2.1-rc.2` 仅在 `@deepseek-ai/*` 各包的版本文本上不同，插件代码、`GenerateOptions` 契约与注入服务完全一致（API 差异对照见 [VERIFICATION.md](VERIFICATION.md)）。更早的 `0.2.0-rc.x` 线是另一套宿主 API：它没有本包注入的 `workingDirectory` 服务，Cordis 会让插件行保持 pending 而非激活；其 pi-ai 线也完全不发 `x-opencode-session`，本包要修的缺陷在该线上无法在不改适配器的情况下修复。两者都在本版支持声明之外。
+窗口为何恰好是这三个版本：`0.2.1-rc.1`、`0.2.1-rc.2` 与 `0.2.1-rc.3` 只在 `@deepseek-ai/*` 各包的版本文本上不同，插件代码、`GenerateOptions` 契约与注入服务完全一致（差异对照见 [VERIFICATION.md](VERIFICATION.md)）。更早的 `0.2.0-rc.x` 线是另一套宿主 API：它没有本包注入的 `workingDirectory` 服务，Cordis 会让插件行保持 pending 而非激活；其 pi-ai 线也完全不发 `x-opencode-session`，本包要修的缺陷在该线上无法在不改适配器的情况下修复。两者都在本版支持声明之外。
 
-唯一常规运行时依赖是 `@deepseek-ai/dsh-util-values`，用同一范围声明，使 profile 解析到宿主对应版本。其余 `@deepseek-ai/*` 包只出现在 `devDependencies` 中，供针对 `0.2.1-rc.2` 的类型检查、测试与构建使用（两个版本在此可互换）。构建把 `@deepseek-ai/*` 标记为 external，共享宿主的 Cordis 与服务实例，不会打入私有副本。
+唯一常规运行时依赖是 `@deepseek-ai/dsh-util-values`，用同一范围声明，使 profile 解析到宿主对应版本。其余 `@deepseek-ai/*` 包只出现在 `devDependencies` 中，供针对 `0.2.1-rc.3` 的类型检查、测试与构建使用（三个版本在此可互换）。构建把 `@deepseek-ai/*` 标记为 external，共享宿主的 Cordis 与服务实例，不会打入私有副本。
 
 上游若发布携带 reviewer 会话身份的正式修复，届时先升级并重新验证，再移除本包（见 [UPSTREAM.md](UPSTREAM.md)）。
 
@@ -151,8 +151,8 @@ pi-ai `1.1.0` 的 OpenCode 提供方只在 `sessionId` 非空且不存在同名�
 
 前置条件：
 
-- 使用与要修改的 Desktop 或 Web UI **相同**的 DSH `0.2.1-rc.1` 或 `0.2.1-rc.2` 安装所提供的 CLI，并指向**同一个** `DSH_HOME`；安装到其他 `DSH_HOME` 或 profile 不会改变当前窗口；
-- 确认 CLI 版本是目标版本（`dsh --version` 应报告 `0.2.1-rc.1` 或 `0.2.1-rc.2`）；其他运行版本会在 profile 加载阶段被停用并给出不兼容诊断——0.2.1 线上由 `engines.dsh` 拦截，0.2.0 线上由锁定的 peer 拦截；
+- 使用与要修改的 Desktop 或 Web UI **相同**的 DSH `0.2.1-rc.1`、`0.2.1-rc.2` 或 `0.2.1-rc.3` 安装所提供的 CLI，并指向**同一个** `DSH_HOME`；安装到其他 `DSH_HOME` 或 profile 不会改变当前窗口；
+- 确认 CLI 版本是目标版本（`dsh --version` 应报告 `0.2.1-rc.1`、`0.2.1-rc.2` 或 `0.2.1-rc.3`）；其他运行版本会在 profile 加载阶段被停用并给出不兼容诊断——0.2.1 线上由 `engines.dsh` 拦截，0.2.0 线上由锁定的 peer 拦截；
 - 与所运行版本匹配的官方 Auto review 组合层必须已启用，并且在 profile 的有序 bundle 列表中位于本包组合层**之前**。DSH 安装随附该层但默认关闭，将其加入 profile 即启用。
 
 步骤 1 —— 确认官方层存在。请使用与宿主相同的版本；如果 profile 的最终组合中已包含官方 `auto-review` 行（例如已在 Web 侧栏插件页开启），跳过此步：
@@ -163,19 +163,22 @@ dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2
 
 # 在 DSH 0.2.1-rc.2 宿主上：
 dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2
+
+# 在 DSH 0.2.1-rc.3 宿主上：
+dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.3
 ```
 
 步骤 2 —— 安装本包。标准路径是 npm registry 包；预构建 tarball 是同一产物，供离线或内网 profile 使用（两者都无需构建，也不依赖开发者源码路径）：
 
 ```sh
-# 从 npm registry 安装（0.1.1 已发布，支持 0.2.1-rc.1 与 0.2.1-rc.2）
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
+# 从 npm registry 安装（0.1.2 是本版；支持 0.2.1-rc.1、0.2.1-rc.2 与 0.2.1-rc.3）
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.2
 
 # 或从发布 tarball 安装（registry 不可达时使用）
-dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
+dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 ```
 
-registry 包与发布 tarball 是同一个预构建产物：`0.1.1` 为 29,159 B、SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`，与 npm registry 上的 tarball 逐字节一致，也是 GitHub Release 的附件；`0.1.0` 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.1` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
+registry 包与发布 tarball 是同一个预构建产物：`0.1.2` 为 29,886 B、SHA-256 `3333782F4698AB4FEC9FBE3E7450B167D0CEA17C6E1A116F2CE0E5734B19F688`；发布工作流会把它作为 GitHub Release 附件，并与 npm registry 上的 tarball 做字节级校验。`0.1.1` 为 29,159 B、SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`；`0.1.0` 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.2` 安装的也是同一个预构建包（发布后）。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
 
 步骤 3 —— 检查生效组合，而不只是 bundle 列表：
 
@@ -269,7 +272,7 @@ dsh plugin --profile <profile> remove @deepseek-ai/dsh-experimental-auto-review
 - 提示词可见的会话身份——`sessionId` 只是传输元数据，reviewer 无法据此判断自己在审查哪个会话；
 - 文件沙箱：外层 `run_code` transport 与 PTC 程序内直接 Node 效果不经过 inner-tool review；
 - 对 provider 配置的任何修改，包括上文所述移除静态请求头的操作；
-- 对已验证窗口（`0.2.1-rc.1` / `0.2.1-rc.2`）之外任何 DSH 版本的支持；尤其是 `0.2.0-rc.x` 线，它缺少本包注入的 `workingDirectory` 服务与 pi-ai 的 `x-opencode-session` 传输链路。
+- 对已验证窗口（`0.2.1-rc.1` / `0.2.1-rc.2` / `0.2.1-rc.3`）之外任何 DSH 版本的支持；尤其是 `0.2.0-rc.x` 线，它缺少本包注入的 `workingDirectory` 服务与 pi-ai 的 `x-opencode-session` 传输链路。
 
 官方固有限制同样适用：模型分类可能出错（Auto 可能放行不安全动作、拒绝有用工作并消耗额外 token）；进程外子代理在父委派调用获准后保留自身权限系统；reviewer 通过已废弃的同步 `snapshotEvents()` 读取会话动作历史。本包只处理 reviewer 缺少 `sessionId` 导致的 `MissingSessionID`；其他网关或 provider 拒绝不在范围内。
 

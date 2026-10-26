@@ -17,16 +17,26 @@ does not carry a session identity, so the pi-ai OpenCode providers cannot emit
 | Adapter under test | `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.2` |
 | pi-ai under test | `@earendil-works/pi-ai@1.1.0` |
 | Cordis baseline | `@deepseek-ai/cordis@4.0.5` |
-| Derived package | `dsh-opencode-auto-review@0.1.1` |
+| Derived package | `dsh-opencode-auto-review@0.1.2` |
 
 An older local DSH source working tree is **not** a source for this project; all files
 below were read from the tagged commit above.
 
-Supported runtime window: this package runs on DSH `0.2.1-rc.1` and `0.2.1-rc.2`. Those
-two releases are one API generation — every `@deepseek-ai/*` package except its
-`package.json` `version` text is byte-identical — so the derived sources and the
-consistency checks below hold for both. The upstream baseline above remains the
-`0.2.1-rc.2` tag used for derivation.
+Supported runtime window: this package runs on DSH `0.2.1-rc.1`, `0.2.1-rc.2` and
+`0.2.1-rc.3`. Those three releases are one API generation — every `@deepseek-ai/*`
+package except its `package.json` `version` text is byte-identical — so the derived
+sources and the consistency checks below hold for all of them. The upstream baseline
+above remains the `0.2.1-rc.2` tag used for derivation.
+
+The rc.3 parity check compared the running desktop runtime directly: every package
+this plugin imports, plus the official `@deepseek-ai/dsh-experimental-auto-review`
+bundle, was extracted from `app.asar` at `0.2.1-rc.3` and diffed against the
+`0.2.1-rc.2` npm packages in `node_modules`. Every compiled `lib/index.js` and
+`lib/types/*.js` file is byte-identical; the official bundle's `lib/index.js` and
+`cordis.patch.yml` are byte-identical too; only `package.json` `version` text (and
+the matching dependency/peer ranges) differs. Upstream tag `dsh-v0.2.1-rc.3`
+(merge commit `1f81c047fc48fa190a683e469daa699857e9afe8`) is six commits after the
+rc.2 tag, none of which touch `packages/experimental/auto-review`.
 
 ## Derived files
 

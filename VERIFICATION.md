@@ -17,8 +17,9 @@ open acceptance items below remain open. Dynamic evidence from the Lead's final 
 teammates is quoted below; everything that was not run remains `NOT COMPLETED` and is
 listed in [Not completed / limitations](#not-completed--limitations).
 
-This file keeps the `0.1.0` record intact and appends a `0.1.1` addendum at the end
-(DSH `0.2.1-rc.1` support window), written on 2026-10-23.
+This file keeps the `0.1.0` record intact, appends the `0.1.1` addendum (DSH
+`0.2.1-rc.1` support window, 2026-10-23) and appends the `0.1.2` addendum (DSH
+`0.2.1-rc.3` support window, 2026-10-26) at the end.
 
 ## Final result
 
@@ -598,3 +599,94 @@ exactly `0.2.1-rc.2` and a real `0.2.1-rc.1` CLI rejected it with
   interchangeable with the 0.1.0 bytes, nor with the earlier 0.1.1 packs
   (29,151 B / `ECA3AF5E…75820405` before the language swap; 28,977 B / `9DF24189…C5EF3`
   after the swap and before the `README_en.md` rename).
+
+## Addendum — 0.1.2: DSH `0.2.1-rc.3` support window
+
+Date: 2026-10-26. Package: `dsh-opencode-auto-review@0.1.2`. Runtime window under test:
+DSH `0.2.1-rc.1`, `0.2.1-rc.2` **and** DSH `0.2.1-rc.3`; adapter
+`@deepseek-ai/dsh-llm-pi-ai` at the host release, pi-ai `@earendil-works/pi-ai@1.1.0`,
+Cordis `@deepseek-ai/cordis@4.0.5` on all three.
+
+### What changed for 0.1.2
+
+- `package.json`: `version` `0.1.2`; `engines.dsh`, all seven `@deepseek-ai/dsh-*`
+  `peerDependencies` and the `@deepseek-ai/dsh-util-values` runtime dependency moved from
+  `0.2.1-rc.1 || 0.2.1-rc.2` to `0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3`. The Cordis peer
+  stays `4.0.5`. `devDependencies` moved from `0.2.1-rc.2` to `0.2.1-rc.3` for the
+  typecheck/test/build host; no other dependency changed.
+- `tests/composition.spec.ts`: the header comment, `SUPPORTED_DSH_RANGE`, the manifest
+  `version` assertion and the window/peer pinning tests now carry the three-release window
+  and `0.1.2`. `tests/opencode-transport.spec.ts`: two comments now name `0.2.1-rc.3`.
+- `pnpm-lock.yaml`: the importer specifier for `@deepseek-ai/dsh-util-values` moved to the
+  three-release window and the lockfile resolves the `@deepseek-ai/*` packages at
+  `0.2.1-rc.3`. Lockfile consistency check below.
+- Runtime source and `lib/` output are unchanged from 0.1.1: `lib/index.js` 23,608 B,
+  SHA-256 `18A92872FFAE35CF7E86C0DB69D4D98B7D618195D08A11150E13F78F26D53E50`;
+  `lib/index.d.ts` 437 B, SHA-256
+  `780FF1B6BC629A0DC3231371AB5BA581B820842C329123A138CE7C568295A811`. `src/index.ts` was
+  not edited; its three known deviations from the fixed rc.2 baseline are unchanged.
+- Documentation: both READMEs (badge, intro, version-support blockquote, quick start,
+  version table, install prerequisites, host bundle install snippet, registry/tarball
+  commands, tarball facts, known limitations), `UPSTREAM.md` (derived-package line, window
+  note, rc.3 parity paragraph), `RELEASING.md` (current npm `latest` note) and this
+  addendum. `DEVELOPMENT.md` is unchanged: it is the historical design snapshot pinned to
+  the rc.2 derivation baseline.
+
+### rc.2 → rc.3 parity evidence (why no source change is needed)
+
+- The installed desktop runtime is `@deepseek-ai/dsh-desktop-runtime@0.2.1-rc.3` inside
+  `D:\DSH\resources\app.asar`. The `0.2.1-rc.3` copies of every package this plugin imports
+  or exercises were extracted from that archive and diffed against the `0.2.1-rc.2` npm
+  packages installed in `node_modules`: `dsh-llm`, `dsh-tools`, `dsh-session`, `dsh-agent`,
+  `dsh-agent-instructions`, `dsh-permission-presets`, `dsh-working-directory`,
+  `dsh-util-values`, `dsh-subagent`, `dsh-user-approval`, `dsh-llm-pi-ai`,
+  `dsh-experimental-auto-review`, `cordis` (4.0.5), plus `dsh-agent-loop`,
+  `dsh-compaction`, `dsh-session-projection`, `dsh-shell`, `dsh-system-prompt` and
+  `dsh-tool-subagent`.
+- Result: for every package the only changed file common to both versions is
+  `package.json` (its `version` text and the matching dependency/peer ranges). Every
+  compiled `lib/index.js` and `lib/types/*.js` file is byte-identical. The files that are
+  absent from the archive copy are only `.d.ts` declarations and `node_modules/.bin`
+  shims, stripped by the desktop packaging.
+- The official `@deepseek-ai/dsh-experimental-auto-review` bundle is byte-identical between
+  rc.2 and rc.3 in both `lib/index.js` and `cordis.patch.yml`; only its `package.json`
+  differs. The upstream reviewer request therefore still omits `sessionId` on rc.3, and the
+  derived `sessionId` patch is still required.
+- Upstream range: tag `dsh-v0.2.1-rc.3` (head merge commit
+  `1f81c047fc48fa190a683e469daa699857e9afe8`) is six commits after the rc.2 tag commit
+  `687f282e8625c6b8d11ff58211a90524be2e4317`; none touch
+  `packages/experimental/auto-review`. The functional commits are UI navigation work
+  (`#6247`, `#6883`), analytics (`#6600`) and the DeepSeek `/models` listing refactor
+  (`#6944`), plus the release commit and its merge.
+
+### Dynamic checks (run 2026-10-26 in this checkout)
+
+| Check | Result |
+| --- | --- |
+| Typecheck against `devDependencies@0.2.1-rc.3` | **PASS** — `node ./node_modules/typescript/bin/tsc --noEmit` exit 0, zero diagnostics. |
+| Full suite against `@deepseek-ai/*@0.2.1-rc.3` | **PASS** — 4 test files, 66/66 tests passed, 0 failed/skipped, 5.55 s: `auto-review.spec.ts` 31/31; `session-routing.spec.ts` 7/7; `opencode-transport.spec.ts` 14/14; `composition.spec.ts` 14/14. Runner: the sandbox preloads from [Environment and test runner](#environment-and-test-runner) plus `--configLoader runner`; the plain `pnpm test` entry still cannot run verbatim in this file sandbox (vitest's config loader spawns a child process, which the sandbox denies). |
+| Lockfile consistency | **PASS** — `pnpm install --frozen-lockfile --lockfile-only --ignore-scripts` exit 0 on a scratch copy of `package.json` + `pnpm-lock.yaml` + `pnpm-workspace.yaml`; the lockfile SHA-256 was unchanged (318 packages, supply-chain policy check passed). |
+| Pack | **PASS** — `npm pack` with the sandbox-only Node loader bridges (the `prepack` `tsdown` build ran and rebuilt `lib/`) exit 0. Final local tarball `dsh-opencode-auto-review-0.1.2.tgz`: 8 files, 29,886 B, SHA-256 `3333782F4698AB4FEC9FBE3E7450B167D0CEA17C6E1A116F2CE0E5734B19F688`, `shasum` `31194ac1ce06412fff127ff30f73a04e1c1a9ad0`; unpacked 84.8 kB; packed file list `package.json`, `cordis.patch.yml`, `lib/index.js`, `lib/index.d.ts`, `README.md`, `README_en.md`, `UPSTREAM.md`, `LICENSE`; packed `lib/` bytes are the hashes above. This pack contains the README/addendum text as of the pack; the tarball-number lines above and this record were then revised to match the same artifact's measured bytes (the pinned pair changed by four documentation bytes between the recorded pack and the final worktree text), so the worktree documentation is newer than the packed copies by those number lines only. |
+| Install + effective composition on DSH `0.2.1-rc.3` | **PASS** — real CLI `0.2.1-rc.3` installed under `scratch/dsh-cli-rc3`; isolated `DSH_HOME` `.verify/dsh-home-rc3` and fresh profile `auto-review-rc3-check`; official `@deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.3` add exit 0; local `0.1.2` tarball add exit 0 **without any version exemption**; `dsh --profile auto-review-rc3-check --dump-config` exit 0 shows the official `- id: auto-review` row `disabled: true` and exactly one active `- id: auto-review-opencode`; tarball payload check (required files present, forbidden paths absent, byte-identical to the install), no install/prepare/postinstall hooks, `--dump-config-schema` exit 0 with no diagnostics. Script: `.verify/run-install-verification-rc3.ps1`, every assertion PASS (run under danger-full-access because the real CLI spawns the package manager and writes its external package store). The artifact used by this check was the earlier `0.1.2` tarball built in the same session (29,301 B, SHA-256 `90324A3044E934EB34F0F2E1A7A01D8AB9C4BED40723983C31082DE224E4CD0E`); its runtime files (`package.json` except the doc-only tarball numbers, `lib/`, `cordis.patch.yml`) are byte-identical to the Pack row artifact. |
+| Negative control: DSH `0.2.0-rc.1` / `0.2.0-rc.2` | **NOT RERUN** — the 0.1.1 record above covers those rejections; the peer/engines gates were widened, not narrowed, so the same rejection must still hold. |
+| npm publication of 0.1.2 | **NOT DONE** — no tag push in this session; registry `latest` remains `0.1.1`. The tag-triggered `release.yml` path first runs on the next `v*` tag push (see the 0.1.1 row). |
+| Real OpenCode gateway allow/deny (E2/F9) | **NOT COMPLETED** — inherited from the earlier records; no gateway credentials in this environment. |
+| Full booted-profile call chain (E1) | **NOT COMPLETED** — inherited; no conversation → reviewer → tool-result run was performed. |
+
+### Evidence provenance
+
+- All 0.1.2 dynamic checks above were run by the Lead on 2026-10-26 in this session. The
+  real `0.2.1-rc.3` CLI was installed from the npm registry into
+  `scratch/dsh-cli-rc3`; the isolated verification home is `.verify/dsh-home-rc3` and the
+  logs are `.verify/logs-rc3/` (both outside the published package; the install script was
+  adapted from `.verify/run-install-verification.ps1`).
+- The rc.3 package extraction used the read-only asar reader `scratch/asar.mjs`; extracted
+  copies live under `scratch/rc3/`. The rc.2 side is the `0.2.1-rc.2` npm install in this
+  checkout's `node_modules`.
+- This file sandbox could not write to pre-existing `node_modules`, `.pnpm-store`, `lib`,
+  `.tools` and `.verify` directories because they predated the workspace-write capability
+  ACL entry; each was repaired with the ACL diagnosis grant (reports and rollback scripts
+  under `scratch/acl-recovery/`, gitignored), after which the install/build/pack/verify
+  steps above ran. No such repair is part of the package or of normal development.
+- Open acceptance items remain exactly the two inherited ones: **E1** (full booted-profile
+  call chain) and **E2/F9** (real OpenCode gateway allow + deny).

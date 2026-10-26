@@ -4,32 +4,36 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/dsh-opencode-auto-review.svg)](https://www.npmjs.com/package/dsh-opencode-auto-review)
-[![DSH 0.2.1-rc.1 | 0.2.1-rc.2](https://img.shields.io/badge/DSH-0.2.1--rc.1%20%7C%200.2.1--rc.2-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH 0.2.1-rc.1 | 0.2.1-rc.2 | 0.2.1-rc.3](https://img.shields.io/badge/DSH-0.2.1--rc.1%20%7C%200.2.1--rc.2%20%7C%200.2.1--rc.3-blue.svg)](https://github.com/deepseek-ai/deepseek-harness)
 [![Node.js >=22.19.0](https://img.shields.io/badge/Node.js-%3E%3D22.19.0-brightgreen.svg)](https://nodejs.org)
 
-Make DSH Auto review work over the OpenCode gateway on DSH `0.2.1-rc.1` and `0.2.1-rc.2`.
+Make DSH Auto review work over the OpenCode gateway on DSH `0.2.1-rc.1`, `0.2.1-rc.2` and
+`0.2.1-rc.3`.
 
-`dsh-opencode-auto-review@0.1.1` is a minimal, stand-alone derivation of the official
-`@deepseek-ai/dsh-experimental-auto-review` bundle (`0.2.1-rc.1` and `0.2.1-rc.2` are the
-same code). It changes exactly one
+`dsh-opencode-auto-review@0.1.2` is a minimal, stand-alone derivation of the official
+`@deepseek-ai/dsh-experimental-auto-review` bundle (`0.2.1-rc.1`, `0.2.1-rc.2` and
+`0.2.1-rc.3` are the same code). It changes exactly one
 behavior: the frozen reviewer request now carries `sessionId: agent.session.id`, so the
 pi-ai OpenCode providers can emit the required `x-opencode-session` header. Everything
 else — review policy, five-section input, risk rules, JSON protocol, approval precedence,
 PTC handling, cancellation and disposal — is the official implementation, unchanged.
 
-> **Version support.** This release supports DSH `0.2.1-rc.1` and `0.2.1-rc.2`, with the
-> matching `@deepseek-ai/dsh-llm-pi-ai` adapter release and pi-ai
-> `@earendil-works/pi-ai@1.1.0`. The two host releases are the same code: every
+> **Version support.** This release supports DSH `0.2.1-rc.1`, `0.2.1-rc.2` and
+> `0.2.1-rc.3`, with the matching `@deepseek-ai/dsh-llm-pi-ai` adapter release and pi-ai
+> `@earendil-works/pi-ai@1.1.0`. The three host releases are the same code: every
 > `@deepseek-ai/*` package is byte-identical apart from its `version` field, so the plugin
-> runs unmodified on either. `engines.dsh: "0.2.1-rc.1 || 0.2.1-rc.2"` is the effective
-> gate on the 0.2.1 line — DSH compares the runtime version with that range before loading
-> a profile and refuses a mismatch with an incompatibility diagnostic (verified on a real
+> runs unmodified on all three (the rc.1↔rc.2 and rc.2↔rc.3 comparison records are in
+> [VERIFICATION.md](VERIFICATION.md)).
+> `engines.dsh: "0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3"` is the effective gate on the
+> 0.2.1 line — DSH compares the runtime version with that range before loading a profile
+> and refuses a mismatch with an incompatibility diagnostic (verified on a real
 > `0.2.1-rc.1` CLI). The `peerDependencies` carry the same range, because older
-> peer-checking host lines and package managers gate on them. The `0.2.0-rc.x` line is not
-> supported: it predates the `workingDirectory` service this plugin injects and the pi-ai
-> `sessionId` transport plumbing, so the plugin stays inactive there even when
-> force-installed. Widening the claim further means re-running the parity and transport
-> checks recorded in [UPSTREAM.md](UPSTREAM.md) and [VERIFICATION.md](VERIFICATION.md).
+> peer-checking host lines and package managers gate on them.
+> The `0.2.0-rc.x` line is not supported: it predates the `workingDirectory` service this
+> plugin injects and the pi-ai `sessionId` transport plumbing, so the plugin stays inactive
+> there even when force-installed. Widening the claim further means re-running the parity
+> and transport checks recorded in [UPSTREAM.md](UPSTREAM.md) and
+> [VERIFICATION.md](VERIFICATION.md).
 
 ## Table of contents
 
@@ -49,24 +53,26 @@ PTC handling, cancellation and disposal — is the official implementation, unch
 
 ## Quick start
 
-The latest release, `0.1.1`, is published on npm with the `latest` dist-tag:
-[`dsh-opencode-auto-review@0.1.1`](https://www.npmjs.com/package/dsh-opencode-auto-review);
-it supports DSH `0.2.1-rc.1` and `0.2.1-rc.2`. `0.1.0` is the previous release and supports
-`0.2.1-rc.2` only. Installation and effective composition are the verified path; the
-load/reselect step and a full booted-profile launch are not covered by that evidence (see
-[Verification status](#verification-status)).
+The current version of `dsh-opencode-auto-review` is `0.1.2`, which keeps `0.2.1-rc.1` and
+`0.2.1-rc.2` and adds `0.2.1-rc.3` support; once published to npm the `latest` dist-tag
+points at it:
+[`dsh-opencode-auto-review@0.1.2`](https://www.npmjs.com/package/dsh-opencode-auto-review).
+`0.1.1` is the previous release and supports `0.2.1-rc.1` and `0.2.1-rc.2`; `0.1.0`
+supports `0.2.1-rc.2` only. Installation and effective composition are the verified path;
+the load/reselect step and a full booted-profile launch are not covered by that evidence
+(see [Verification status](#verification-status)).
 
 Prerequisite: the official `@deepseek-ai/dsh-experimental-auto-review` bundle layer for the
-DSH release you run (`0.2.1-rc.1` or `0.2.1-rc.2`) must already be enabled in the profile
-and ordered before this package ([Installation](#installation) step 1). Without it the
-patch's disable entry only warns, and the composition check below cannot pass.
+DSH release you run (`0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3`) must already be enabled in
+the profile and ordered before this package ([Installation](#installation) step 1).
+Without it the patch's disable entry only warns, and the composition check below cannot pass.
 
 ```sh
 # 1. Install the package into the target profile
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.2
 
 #    Offline alternative: install the same prebuilt artifact from its tarball
-#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
+#    dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 
 # 2. Check the effective composition
 dsh --profile <profile> --dump-config
@@ -201,9 +207,9 @@ text applies verbatim to this package.
 
 | Item | Required version |
 | --- | --- |
-| DSH runtime | `0.2.1-rc.1` or `0.2.1-rc.2` — the two releases ship the same host API |
-| Declared compatibility | `engines.dsh: "0.2.1-rc.1 \|\| 0.2.1-rc.2"` — the effective gate on the 0.2.1 line, where it is checked alone and the peers are not consulted |
-| Adapter | `@deepseek-ai/dsh-llm-pi-ai` at the same release as the host (`0.2.1-rc.1` or `0.2.1-rc.2`) |
+| DSH runtime | `0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3` — the three releases ship the same host API |
+| Declared compatibility | `engines.dsh: "0.2.1-rc.1 \|\| 0.2.1-rc.2 \|\| 0.2.1-rc.3"` — the effective gate on the 0.2.1 line, where it is checked alone and the peers are not consulted |
+| Adapter | `@deepseek-ai/dsh-llm-pi-ai` at the same release as the host (`0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3`) |
 | pi-ai | `@earendil-works/pi-ai@1.1.0` (with the DSH repository patch) |
 | Cordis | `@deepseek-ai/cordis@4.0.5` |
 | Node.js | `>=22.19.0` (`engines.node`) |
@@ -218,14 +224,14 @@ Compatibility is declared in two places, and both carry the same window:
   before this change widened the range.
 - The `peerDependencies` are the gate on host lines that ignore `engines.dsh` (the older
   0.2.0 line checks only peers), and they are what package managers use to resolve the
-  shared Cordis and service instances. They carry the same `0.2.1-rc.1 || 0.2.1-rc.2`
-  range; Cordis stays at `4.0.5`.
+  shared Cordis and service instances. They carry the same
+  `0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3` range; Cordis stays at `4.0.5`.
 
-Why the window is these two releases and not more: `0.2.1-rc.1` and `0.2.1-rc.2` differ only
-in the version strings of the `@deepseek-ai/*` packages, so the plugin code, the
-`GenerateOptions` contract and the injected services are identical (the API diff is part of
-the [VERIFICATION.md](VERIFICATION.md) record). The earlier `0.2.0-rc.x` line is a
-different host API: it has no `workingDirectory` service, which this plugin injects, so
+Why the window is these three releases and not more: `0.2.1-rc.1`, `0.2.1-rc.2` and
+`0.2.1-rc.3` differ only in the version strings of the `@deepseek-ai/*` packages, so the
+plugin code, the `GenerateOptions` contract and the injected services are identical (the API
+diff is part of the [VERIFICATION.md](VERIFICATION.md) record). The earlier `0.2.0-rc.x` line
+is a different host API: it has no `workingDirectory` service, which this plugin injects, so
 Cordis keeps the plugin row pending instead of activating it; and its pi-ai line does not
 emit `x-opencode-session` at all, so the defect this package fixes cannot be fixed there
 without an adapter change. Both are outside this release's support claim.
@@ -233,7 +239,7 @@ without an adapter change. Both are outside this release's support claim.
 The only regular runtime dependency is `@deepseek-ai/dsh-util-values`, declared with the
 same range so a profile resolves the running host's release. The remaining `@deepseek-ai/*`
 packages appear only in `devDependencies` for typechecking, tests and the build against
-`0.2.1-rc.2` (the two releases are interchangeable here). The build marks `@deepseek-ai/*`
+`0.2.1-rc.3` (the three releases are interchangeable here). The build marks `@deepseek-ai/*`
 as external, so the host's Cordis and service instances are shared, not duplicated.
 
 When upstream ships an official fix that carries the reviewer session identity, upgrade and
@@ -247,13 +253,13 @@ from the first-release support claim because there is no real-gateway acceptance
 
 Prerequisites:
 
-- use the DSH CLI from the **same** DSH `0.2.1-rc.1` or `0.2.1-rc.2` installation and the
-  **same** `DSH_HOME` as the Desktop or Web UI you want to change; installing into another
-  `DSH_HOME` or profile does not affect the running window;
+- use the DSH CLI from the **same** DSH `0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3`
+  installation and the **same** `DSH_HOME` as the Desktop or Web UI you want to change;
+  installing into another `DSH_HOME` or profile does not affect the running window;
 - confirm the CLI version is the release you target (`dsh --version` should report
-  `0.2.1-rc.1` or `0.2.1-rc.2`); a different runtime gets the row disabled with an
-  incompatibility diagnostic at profile load — `engines.dsh` does that on the 0.2.1 line,
-  the pinned peers do it on the 0.2.0 line;
+  `0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3`); a different runtime gets the row disabled
+  with an incompatibility diagnostic at profile load — `engines.dsh` does that on the 0.2.1
+  line, the pinned peers do it on the 0.2.0 line;
 - the official Auto review bundle layer for that same DSH release must be enabled and
   appear **before** this package's bundle layer in the profile's ordered bundle list. The
   shipped DSH installation contains the layer but leaves it switched off; adding it to
@@ -269,6 +275,9 @@ dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2
 
 # On a DSH 0.2.1-rc.2 host:
 dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.2
+
+# On a DSH 0.2.1-rc.3 host:
+dsh plugin --profile <profile> add @deepseek-ai/dsh-experimental-auto-review@0.2.1-rc.3
 ```
 
 Step 2 — add this package. The standard path is the npm registry package; the prebuilt
@@ -276,19 +285,22 @@ tarball is the same artifact for offline or air-gapped profiles (no build step, 
 developer source path in either case):
 
 ```sh
-# From the npm registry (0.1.1 is published; supports 0.2.1-rc.1 and 0.2.1-rc.2)
-dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.1
+# From the npm registry (0.1.2 is the current release; supports
+# 0.2.1-rc.1, 0.2.1-rc.2 and 0.2.1-rc.3)
+dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.2
 
 # Or from the release tarball, when the registry is not reachable
-dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.1.tgz
+dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 ```
 
-The tarball is the same prebuilt artifact the registry release publishes: `0.1.1` is
-29,159 B, SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`,
-byte-identical to the tarball on the npm registry and to the GitHub Release asset; `0.1.0`
-is 27,545 B, SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`.
+The registry package and the release tarball are the same prebuilt artifact: `0.1.2` is
+29,886 B, SHA-256 `3333782F4698AB4FEC9FBE3E7450B167D0CEA17C6E1A116F2CE0E5734B19F688` (the
+current release, not yet on npm); `0.1.1` is 29,159 B, SHA-256
+`82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`, byte-identical to the
+tarball on the npm registry and to the GitHub Release asset; `0.1.0` is 27,545 B, SHA-256
+`63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`.
 If you only need the package as a dependency in another project,
-`npm install dsh-opencode-auto-review@0.1.1` installs that same prebuilt package. Do not
+`npm install dsh-opencode-auto-review@0.1.2` installs that same prebuilt package. Do not
 substitute a git checkout: `lib/` is gitignored and the package has no
 `prepare`/`install` build hook, so a source install has no built entry point.
 
@@ -435,9 +447,9 @@ This release deliberately does not add:
   program do not pass through inner-tool review;
 - any change to provider configuration, including the static header workaround removal
   described above;
-- support for any DSH release outside the verified `0.2.1-rc.1` / `0.2.1-rc.2` window —
-  in particular the `0.2.0-rc.x` line, which lacks the `workingDirectory` service and the
-  pi-ai `x-opencode-session` transport.
+- support for any DSH release outside the verified `0.2.1-rc.1` / `0.2.1-rc.2` /
+  `0.2.1-rc.3` window — in particular the `0.2.0-rc.x` line, which lacks the
+  `workingDirectory` service and the pi-ai `x-opencode-session` transport.
 
 Inherited official limitations still apply: model classification can be wrong (Auto may
 allow unsafe actions, deny useful work, and spend additional tokens); out-of-process

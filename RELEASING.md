@@ -20,7 +20,7 @@ GitHub Release 使用工作流内置的 `GITHUB_TOKEN`（`contents: write`）。
 
 ### 1.1 前提
 
-- 包 `dsh-opencode-auto-review` 已存在于 npm registry（`0.1.0`、`0.1.1` 已发布，当前 `latest` 为 `0.1.1`）。
+- 包 `dsh-opencode-auto-review` 已存在于 npm registry（`0.1.0`、`0.1.1` 已发布，当前 `latest` 为 `0.1.1`；`0.1.2` 尚未发布，首次 `v0.1.2` tag 发布成功后成为 `latest`）。
 - npm 账号已开启 2FA。Trusted Publishing 的创建命令要求账号级 2FA，
   且不支持带「bypass 2FA」的 Granular Access Token。
 - `package.json` 的 `repository` 字段指向本仓库。发布 provenance（来源证明）
