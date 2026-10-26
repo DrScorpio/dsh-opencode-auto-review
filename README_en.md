@@ -54,8 +54,7 @@ PTC handling, cancellation and disposal — is the official implementation, unch
 ## Quick start
 
 The current version of `dsh-opencode-auto-review` is `0.1.2`, which keeps `0.2.1-rc.1` and
-`0.2.1-rc.2` and adds `0.2.1-rc.3` support; once published to npm the `latest` dist-tag
-points at it:
+`0.2.1-rc.2` and adds `0.2.1-rc.3` support; `latest` on npm points at it:
 [`dsh-opencode-auto-review@0.1.2`](https://www.npmjs.com/package/dsh-opencode-auto-review).
 `0.1.1` is the previous release and supports `0.2.1-rc.1` and `0.2.1-rc.2`; `0.1.0`
 supports `0.2.1-rc.2` only. Installation and effective composition are the verified path;
@@ -294,8 +293,8 @@ dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 ```
 
 The registry package and the release tarball are the same prebuilt artifact: `0.1.2` is
-29,886 B, SHA-256 `3333782F4698AB4FEC9FBE3E7450B167D0CEA17C6E1A116F2CE0E5734B19F688` (the
-current release, not yet on npm); `0.1.1` is 29,159 B, SHA-256
+29,886 B, SHA-256 `24FA21BA84ED06C6022E8F85F679DF5F2C8AC4984417A213CF4C39D274C4A49C` (the
+current release, `latest` on npm); `0.1.1` is 29,159 B, SHA-256
 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`, byte-identical to the
 tarball on the npm registry and to the GitHub Release asset; `0.1.0` is 27,545 B, SHA-256
 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`.

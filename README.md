@@ -178,7 +178,7 @@ dsh plugin --profile <profile> add dsh-opencode-auto-review@0.1.2
 dsh plugin --profile <profile> add ./dsh-opencode-auto-review-0.1.2.tgz
 ```
 
-registry 包与发布 tarball 是同一个预构建产物：`0.1.2` 为 29,886 B、SHA-256 `3333782F4698AB4FEC9FBE3E7450B167D0CEA17C6E1A116F2CE0E5734B19F688`；发布工作流会把它作为 GitHub Release 附件，并与 npm registry 上的 tarball 做字节级校验。`0.1.1` 为 29,159 B、SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`；`0.1.0` 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.2` 安装的也是同一个预构建包（发布后）。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
+registry 包与发布 tarball 是同一个预构建产物：`0.1.2` 为 29,886 B、SHA-256 `24FA21BA84ED06C6022E8F85F679DF5F2C8AC4984417A213CF4C39D274C4A49C`（npm `latest`，与 GitHub Release 附件逐字节一致）；发布工作流把它作为 GitHub Release 附件，并与 npm registry 上的 tarball 做字节级校验。`0.1.1` 为 29,159 B、SHA-256 `82457F551ABC63330F3739A9DDFC2780D2BAEDD5824014508C94115F4E808005`；`0.1.0` 为 27,545 B、SHA-256 `63A76209BFED6B5614B5F5453DEE58713BF4BD0EC73683D275E784659D93A29C`。如果只是需要在其他项目中把它作为依赖使用，`npm install dsh-opencode-auto-review@0.1.2` 安装的也是同一个预构建包。不要改用 git 检出：`lib/` 已被 gitignore，且包内没有 `prepare`/`install` 构建钩子，源码安装不会得到已构建的入口。
 
 步骤 3 —— 检查生效组合，而不只是 bundle 列表：
 
